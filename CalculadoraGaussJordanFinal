@@ -1,0 +1,1401 @@
+package javaapplication36;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.event.ChangeListener; 
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent; 
+import java.awt.event.FocusListener; 
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Vector; 
+
+public class CalculadoraGaussJordanFinal extends JFrame implements ActionListener {
+
+    // Constante de tolerancia para la comparación de números flotantes (cercanos a cero)
+    private static final double TOLERANCE = 1e-9; 
+
+    // --- VARIABLES DE HISTORIAL ---
+    private final List<MatrizHistorial> historialMatrices;
+    private DefaultTableModel modeloTablaHistorial;
+    private JTable tablaHistorial;
+    private final JButton btnEditarHistorial;
+    private final JButton btnBorrarHistorial;
+    // -------------------------------------
+
+    // Componentes de la interfaz
+    private JTextField[][] campos; // Matriz Principal Aumentada
+    private final JTextArea resultadoSistemaArea; 
+    private final JTextArea resultadoInversaArea; 
+    private final JComboBox<String> cmbTamano;
+    private final JPanel panelMatrizContainer;
+    private final JTabbedPane tabbedPane;
+    
+    // Componentes para la entrada de ecuaciones por término
+    private final List<List<JTextField>> camposEcuaciones; 
+    private final List<JTextField> camposResultados; 
+    private int tamanoActual = 3; 
+    
+    // --- VARIABLES PARA EL TECLADO VIRTUAL Y NAVEGACIÓN (AHORA PANEL FIJO) ---
+    private JTextField campoActivo; 
+    private JPanel panelTecladoFijo; 
+    // -------------------------------------------------------------------------
+
+    // --- PALETA DE COLORES AJUSTADA ---
+    private final Color COLOR_PRIMARIO = new Color(39, 174, 96); // Verde Esmeralda (Principal)
+    private final Color COLOR_FONDO = new Color(248, 249, 249); // Gris Muy Claro
+    private final Color COLOR_BOTON_SISTEMA = new Color(52, 152, 219); // Azul Peter River
+    private final Color COLOR_BOTON_INVERSA = new Color(243, 156, 18); // Naranja Calabaza
+    private final Color COLOR_TEXTO_MATRIZ = new Color(44, 62, 80); // Azul Medianoche
+    private final Color COLOR_FONDO_B = new Color(232, 248, 245); // Fondo de Término independiente (Más suave)
+    private final Color COLOR_HISTORIAL = new Color(155, 89, 182); // Púrpura Amethyst
+    private final Color COLOR_BORRADO = new Color(231, 76, 60); // Rojo Alizarin (Borrar/Limpiar)
+    private final Color COLOR_ACCION_SECUNDARIA = new Color(52, 73, 94); // Azul Profundo
+    // ----------------------------------
+
+    public CalculadoraGaussJordanFinal() {
+        super("✨ Calculadora Gauss-Jordan: Historial y Matriz ✨");
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setSize(1200, 750); 
+        setLocationRelativeTo(null);
+        getContentPane().setBackground(COLOR_FONDO);
+        setLayout(new BorderLayout(10, 10));
+        
+        historialMatrices = new ArrayList<>();
+        
+        // --- ENCABEZADO Y TAMAÑO ---
+        JPanel panelControl = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8));
+        panelControl.setBackground(Color.WHITE);
+        panelControl.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        JLabel titulo = new JLabel("Método de Eliminación Gauss-Jordan");
+        titulo.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titulo.setForeground(COLOR_ACCION_SECUNDARIA); 
+
+        JLabel lblTamano = new JLabel("Matriz (NxN):"); 
+        String[] tamanos = {"2x2", "3x3", "4x4", "5x5", "6x6", "7x7", "8x8", "9x9", "10x10"};
+        cmbTamano = new JComboBox<>(tamanos);
+        cmbTamano.setSelectedIndex(1); 
+        cmbTamano.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        cmbTamano.addActionListener(e -> cambiarTamanoMatriz());
+        cmbTamano.setBackground(new Color(236, 240, 241)); 
+        cmbTamano.setForeground(COLOR_TEXTO_MATRIZ);
+
+        panelControl.add(titulo);
+        panelControl.add(Box.createHorizontalStrut(20));
+        panelControl.add(lblTamano);
+        panelControl.add(cmbTamano);
+        add(panelControl, BorderLayout.NORTH);
+
+        // --- PESTAÑAS Y CUERPO PRINCIPAL ---
+        tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        tabbedPane.setBackground(COLOR_FONDO); 
+        
+        // * Listener para cerrar el TECLADO FIJO al cambiar de pestaña *
+        tabbedPane.addChangeListener((ChangeListener) e -> {
+            // Si el índice de la pestaña no es 0 (Ingreso de Matriz)
+            if (panelTecladoFijo != null && panelTecladoFijo.isVisible() && tabbedPane.getSelectedIndex() != 0) {
+                panelTecladoFijo.setVisible(false);
+            }
+        });
+        // ------------------------------------------------------------------
+
+        // 1. PESTAÑA DE INGRESO
+        JPanel panelIngresoCompleto = new JPanel(new BorderLayout(10, 10));
+        panelIngresoCompleto.setBackground(COLOR_FONDO);
+
+        JPanel panelEntradaGeneral = new JPanel();
+        panelEntradaGeneral.setLayout(new BoxLayout(panelEntradaGeneral, BoxLayout.Y_AXIS));
+        panelEntradaGeneral.setBackground(COLOR_FONDO);
+        panelEntradaGeneral.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        JPanel panelEntradaTexto = new JPanel(new BorderLayout(5, 5));
+        panelEntradaTexto.setBackground(Color.WHITE);
+        panelEntradaTexto.setBorder(BorderFactory.createTitledBorder(
+              BorderFactory.createLineBorder(COLOR_PRIMARIO, 1), 
+              "✍️ Escribir Ejercicio (Coeficientes por Término)", 
+              0, 2, new Font("Segoe UI", Font.BOLD, 14), COLOR_PRIMARIO));
+        
+        JPanel ecuacionFieldsPanel = new JPanel(new GridBagLayout());
+        ecuacionFieldsPanel.setBackground(Color.WHITE);
+        
+        camposEcuaciones = new ArrayList<>();
+        camposResultados = new ArrayList<>();
+        
+        initializeInputPanel(tamanoActual, ecuacionFieldsPanel); 
+
+        JButton btnOrganizar = crearBoton("Transferir a Matriz", COLOR_ACCION_SECUNDARIA, Color.WHITE);
+        btnOrganizar.addActionListener(e -> transferirAcuadros()); 
+        
+        // --- INICIO: Panel para botones de Ecuaciones ---
+        JPanel panelBotonesEcuacion = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panelBotonesEcuacion.setBackground(Color.WHITE);
+        
+        JButton btnEjemploEcuacion = crearBoton("📋 Completar y Ver Ejemplo", new Color(41, 128, 185), Color.WHITE);
+        btnEjemploEcuacion.addActionListener(e -> cargarEjemplo(true)); 
+        
+        panelBotonesEcuacion.add(btnEjemploEcuacion);
+        panelBotonesEcuacion.add(btnOrganizar);
+        
+        panelEntradaTexto.add(ecuacionFieldsPanel, BorderLayout.CENTER);
+        panelEntradaTexto.add(panelBotonesEcuacion, BorderLayout.SOUTH);
+        // --- FIN: Panel para botones de Ecuaciones ---
+
+
+        panelEntradaGeneral.add(panelEntradaTexto); 
+        panelEntradaGeneral.add(Box.createVerticalStrut(15)); 
+
+        JPanel panelMatrizCoeficientes = new JPanel(new BorderLayout(10, 10));
+        panelMatrizCoeficientes.setBackground(Color.WHITE);
+        panelMatrizCoeficientes.setBorder(BorderFactory.createTitledBorder(
+              BorderFactory.createLineBorder(COLOR_BOTON_SISTEMA, 1), 
+              "🔢 Matriz de Coeficientes Aumentada", 
+              0, 2, new Font("Segoe UI", Font.BOLD, 14), COLOR_BOTON_SISTEMA));
+
+        panelMatrizContainer = new JPanel(new GridBagLayout()); 
+        panelMatrizContainer.setBackground(Color.WHITE);
+        inicializarMatriz(tamanoActual);
+
+        panelMatrizCoeficientes.add(panelMatrizContainer, BorderLayout.CENTER);
+        panelEntradaGeneral.add(panelMatrizCoeficientes); 
+        
+        // --- PANEL DE ACCIONES Y NUEVO BOTÓN DE TECLADO NUMÉRICO ---
+        JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
+        panelAcciones.setBackground(COLOR_FONDO);
+        
+        JButton btnResolverSistema = crearBoton("Resolver Sistema (Ax=b) y Guardar", COLOR_BOTON_SISTEMA, Color.WHITE);
+        btnResolverSistema.addActionListener(e -> { guardarMatrizEnHistorial(); calcularAmbosResultados(0); }); 
+
+        JButton btnCalcularInversa = crearBoton("Calcular Inversa (A⁻¹) y Guardar", COLOR_BOTON_INVERSA, Color.WHITE);
+        btnCalcularInversa.addActionListener(e -> { guardarMatrizEnHistorial(); calcularAmbosResultados(1); }); 
+
+        JButton btnLimpiar = crearBoton("Limpiar Todo", COLOR_BORRADO, Color.WHITE);
+        btnLimpiar.addActionListener(e -> limpiarCampos());
+        
+        // LÓGICA DE FOCO AUTOMÁTICO AL ABRIR EL TECLADO
+        JButton btnAbrirTeclado = crearBoton("⌨️ Mostrar Teclado Numérico", COLOR_PRIMARIO, Color.WHITE);
+        btnAbrirTeclado.addActionListener(e -> {
+            if (campoActivo == null) {
+                if (!camposEcuaciones.isEmpty() && !camposEcuaciones.get(0).isEmpty()) {
+                    camposEcuaciones.get(0).get(0).requestFocusInWindow();
+                    return; 
+                }
+            }
+            abrirTecladoNumerico();
+        });
+
+        panelAcciones.add(btnResolverSistema);
+        panelAcciones.add(btnCalcularInversa);
+        panelAcciones.add(btnAbrirTeclado); 
+        panelAcciones.add(btnLimpiar);
+        // -------------------------------------------------------------
+        
+        JScrollPane scrollPanelIngreso = new JScrollPane(panelEntradaGeneral);
+        scrollPanelIngreso.setBorder(null); 
+        
+        // -----------------------------------------------------------------
+        // --- NUEVA ESTRUCTURA: COLOCAR EL TECLADO FIJO A LA DERECHA ---
+        // -----------------------------------------------------------------
+        panelTecladoFijo = crearTecladoFijo(); 
+        panelTecladoFijo.setVisible(false); 
+
+        JPanel panelContenidoPrincipal = new JPanel(new BorderLayout(10, 0)); 
+        panelContenidoPrincipal.setBackground(COLOR_FONDO);
+        panelContenidoPrincipal.add(scrollPanelIngreso, BorderLayout.CENTER);
+        panelContenidoPrincipal.add(panelTecladoFijo, BorderLayout.EAST); 
+
+        panelIngresoCompleto.add(panelContenidoPrincipal, BorderLayout.CENTER); 
+        panelIngresoCompleto.add(panelAcciones, BorderLayout.SOUTH); 
+        // -----------------------------------------------------------------
+
+        tabbedPane.addTab("🔢 Ingreso de Matriz", panelIngresoCompleto);
+
+        // 2. PESTAÑA DE SOLUCIÓN
+        resultadoSistemaArea = new JTextArea();
+        resultadoSistemaArea.setEditable(false);
+        resultadoSistemaArea.setFont(new Font("Consolas", Font.PLAIN, 13)); 
+        resultadoSistemaArea.setForeground(COLOR_TEXTO_MATRIZ);
+        JScrollPane scrollResultadoSistema = new JScrollPane(resultadoSistemaArea);
+        scrollResultadoSistema.setBorder(BorderFactory.createTitledBorder(
+              BorderFactory.createLineBorder(COLOR_BOTON_SISTEMA, 2), 
+              "📝 Solución (Ax=b)", 
+              0, 2, new Font("Segoe UI", Font.BOLD, 14), COLOR_BOTON_SISTEMA));
+        tabbedPane.addTab("📝 Solución (Ax=b)", scrollResultadoSistema);
+
+        // 3. PESTAÑA DE INVERSA
+        resultadoInversaArea = new JTextArea();
+        resultadoInversaArea.setEditable(false);
+        resultadoInversaArea.setFont(new Font("Consolas", Font.PLAIN, 13)); 
+        resultadoInversaArea.setForeground(COLOR_TEXTO_MATRIZ);
+        JScrollPane scrollResultadoInversa = new JScrollPane(resultadoInversaArea);
+        scrollResultadoInversa.setBorder(BorderFactory.createTitledBorder(
+              BorderFactory.createLineBorder(COLOR_BOTON_INVERSA, 2), 
+              "⭐ Detalle del Proceso y Matriz Inversa (A⁻¹)", 
+              0, 2, new Font("Segoe UI", Font.BOLD, 14), COLOR_BOTON_INVERSA));
+        tabbedPane.addTab("⭐ Inversa (A⁻¹)", scrollResultadoInversa);
+
+        // 4. PESTAÑA DE HISTORIAL
+        JPanel panelHistorial = new JPanel(new BorderLayout(10, 10));
+        panelHistorial.setBackground(COLOR_FONDO);
+        
+        // Modelo y Tabla
+        String[] columnas = {"ID", "Tamaño", "Fecha y Hora", "Matriz A", "Vector b"};
+        modeloTablaHistorial = new DefaultTableModel(columnas, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; 
+            }
+        };
+        tablaHistorial = new JTable(modeloTablaHistorial);
+        tablaHistorial.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        tablaHistorial.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        
+        // --- ESTILOS DE TABLA MEJORADOS (Fondo Blanco y Rayas) ---
+        tablaHistorial.setBackground(Color.WHITE); 
+        tablaHistorial.setFillsViewportHeight(true); 
+        tablaHistorial.setGridColor(new Color(200, 200, 200)); 
+        tablaHistorial.setShowVerticalLines(true); 
+        tablaHistorial.setShowHorizontalLines(true); 
+        
+        tablaHistorial.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tablaHistorial.getTableHeader().setBackground(new Color(220, 230, 240)); 
+        tablaHistorial.getTableHeader().setForeground(COLOR_TEXTO_MATRIZ); 
+        tablaHistorial.setRowHeight(30); 
+        // ---------------------------------------------------------
+
+        // Ajustar el ancho de las columnas
+        tablaHistorial.getColumnModel().getColumn(0).setPreferredWidth(30); 
+        tablaHistorial.getColumnModel().getColumn(1).setPreferredWidth(50); 
+        tablaHistorial.getColumnModel().getColumn(2).setPreferredWidth(120); 
+        tablaHistorial.getColumnModel().getColumn(3).setPreferredWidth(250); 
+        tablaHistorial.getColumnModel().getColumn(4).setPreferredWidth(100); 
+
+        JScrollPane scrollHistorial = new JScrollPane(tablaHistorial);
+        scrollHistorial.setBorder(BorderFactory.createTitledBorder(
+              BorderFactory.createLineBorder(COLOR_HISTORIAL, 2), 
+              "📚 Historial de Cálculos", 
+              0, 2, new Font("Segoe UI", Font.BOLD, 14), COLOR_HISTORIAL));
+        
+        panelHistorial.add(scrollHistorial, BorderLayout.CENTER);
+        
+        // Botones de Acción de Historial
+        JPanel panelBotonesHistorial = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        panelBotonesHistorial.setBackground(COLOR_FONDO);
+        
+        btnEditarHistorial = crearBoton("✏️ Editar/Cargar Matriz", new Color(52, 152, 219), Color.WHITE);
+        btnEditarHistorial.addActionListener(e -> editarCargarMatriz());
+        btnEditarHistorial.setEnabled(false);
+        
+        btnBorrarHistorial = crearBoton("🗑️ Borrar Selección", COLOR_BORRADO, Color.WHITE);
+        btnBorrarHistorial.addActionListener(e -> borrarRegistroHistorial());
+        btnBorrarHistorial.setEnabled(false);
+        
+        panelBotonesHistorial.add(btnEditarHistorial);
+        panelBotonesHistorial.add(btnBorrarHistorial);
+        
+        panelHistorial.add(panelBotonesHistorial, BorderLayout.SOUTH);
+        
+        tabbedPane.addTab("📚 Historial", panelHistorial);
+        
+        // Habilitar/deshabilitar botones de historial al seleccionar fila
+        tablaHistorial.getSelectionModel().addListSelectionListener(e -> {
+            boolean isSelected = tablaHistorial.getSelectedRow() != -1;
+            btnEditarHistorial.setEnabled(isSelected);
+            btnBorrarHistorial.setEnabled(isSelected);
+        });
+
+        add(tabbedPane, BorderLayout.CENTER);
+    }
+    // --- MÉTODOS DE HISTORIAL ---
+    
+    private void guardarMatrizEnHistorial() {
+        int n = tamanoActual;
+        double[][] matrizDatos = new double[n][n + 1];
+
+        try {
+            // Leer y PARSEAR la matriz
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n + 1; j++) {
+                    String text = campos[i][j].getText();
+                    if (text.isEmpty()) {
+                        matrizDatos[i][j] = 0.0;
+                    } else {
+                        matrizDatos[i][j] = Double.parseDouble(text);
+                    }
+                }
+            }
+            
+            MatrizHistorial registro = new MatrizHistorial(matrizDatos, n, new Date());
+            historialMatrices.add(registro);
+            
+            actualizarTablaHistorial(registro);
+            
+        } catch (NumberFormatException ex) {
+            // No guardar si hay error de formato.
+        }
+    }
+    
+    private void actualizarTablaHistorial(MatrizHistorial registro) {
+        String matrizA = registro.matrizToString(0, registro.getTamano());
+        String vectorB = registro.matrizToString(registro.getTamano(), 1);
+
+        Vector<Object> fila = new Vector<>();
+        fila.add(historialMatrices.size()); 
+        fila.add(registro.getTamano() + "x" + registro.getTamano());
+        
+        // Formato de 12 horas con AM/PM
+        SimpleDateFormat formato12h = new SimpleDateFormat("dd/MM/yy hh:mm:ss a");
+        fila.add(formato12h.format(registro.getFecha())); 
+        
+        fila.add(matrizA);
+        fila.add(vectorB);
+        
+        modeloTablaHistorial.addRow(fila);
+    }
+    
+    private void editarCargarMatriz() {
+        int filaSeleccionada = tablaHistorial.getSelectedRow();
+        if (filaSeleccionada == -1) {
+            return;
+        }
+        
+        MatrizHistorial registro = historialMatrices.get(filaSeleccionada);
+        int n = registro.getTamano();
+        double[][] datos = registro.getMatriz();
+        
+        String tamanoStr = n + "x" + n;
+        cmbTamano.setSelectedItem(tamanoStr); 
+        
+        // Limpiar campos de ecuaciones por término
+        for (List<JTextField> fila : camposEcuaciones) {
+            for (JTextField campo : fila) {
+                campo.setText("");
+            }
+        }
+        for (JTextField campo : camposResultados) {
+            campo.setText("");
+        }
+
+        // Cargar los nuevos valores a los campos de la Matriz Aumentada
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n + 1; j++) {
+                DecimalFormat df = new DecimalFormat("0.#####");
+                campos[i][j].setText(df.format(datos[i][j]));
+            }
+        }
+        
+        tabbedPane.setSelectedIndex(0);
+        JOptionPane.showMessageDialog(this, "Matriz cargada de " + tamanoStr + " en la pestaña 'Ingreso de Matriz'.", "Carga Exitosa", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void borrarRegistroHistorial() {
+        int filaSeleccionada = tablaHistorial.getSelectedRow();
+        if (filaSeleccionada == -1) {
+            return;
+        }
+        
+        int confirmacion = JOptionPane.showConfirmDialog(this, 
+                "¿Estás seguro de que quieres eliminar este registro del historial?", 
+                "Confirmar Borrado", 
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            historialMatrices.remove(filaSeleccionada);
+            modeloTablaHistorial.removeRow(filaSeleccionada);
+            
+            // Re-numerar el ID
+            for (int i = 0; i < modeloTablaHistorial.getRowCount(); i++) {
+                modeloTablaHistorial.setValueAt(i + 1, i, 0);
+            }
+            
+            JOptionPane.showMessageDialog(this, "Registro eliminado con éxito.", "Borrado", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+    // -------------------------------------
+
+    private JButton crearBoton(String texto, Color fondo, Color textoColor) {
+        JButton b = new JButton(texto);
+        b.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        b.setBackground(fondo);
+        b.setForeground(textoColor);
+        b.setFocusPainted(false);
+        b.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15)); 
+        return b;
+    }
+    
+    /**
+     * Carga un ejemplo NxN en los campos de ecuación y, opcionalmente, lo transfiere a la matriz principal.
+     */
+    private void cargarEjemplo(boolean forceTransfer) {
+        int n = tamanoActual;
+        double[][] ejemploMatriz;
+        
+        // Usar Random para generar coeficientes variados
+        java.util.Random rand = new java.util.Random(); 
+
+        // Definición de ejemplos
+        if (n == 3) {
+            // Ejemplo 3x3 original:
+            // -x + 6y + 1z = 8
+            // 3x + 2y + 8z = 3 
+            // 9x + 5y + 7z = 9
+            ejemploMatriz = new double[][]{
+                { -1.0,  6.0,  1.0,  8.0 },
+                { 3.0,   2.0,  8.0,  3.0 },
+                { 9.0,   5.0,  7.0,  9.0 }
+            };
+        } else {
+            // Para tamaños > 3, generar una matriz con números aleatorios variados (entre -9 y 9), NO una identidad
+            ejemploMatriz = new double[n][n + 1];
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n + 1; j++) {
+                    // Generar un entero entre -9 y 9.
+                    int num = rand.nextInt(19) - 9; // [0, 18] -> [-9, 9]
+                    
+                    // Asegurar que si es 0, al menos lo cambie a 1 o -1 para hacer la matriz más interesante
+                    if (num == 0) {
+                        num = rand.nextBoolean() ? 1 : -1;
+                    }
+                    ejemploMatriz[i][j] = num;
+                }
+            }
+        }
+        
+        DecimalFormat df = new DecimalFormat("0.#"); 
+
+        // 1. Limpiar campos existentes antes de cargar (si ya estaba en el tamaño correcto)
+        if (tamanoActual == n) {
+             limpiarCampos(); 
+        } 
+        
+        // 2. Cargar datos en los campos de Ecuaciones por Término
+        for (int i = 0; i < n; i++) {
+            // Coeficientes A
+            for (int j = 0; j < n; j++) {
+                // Formatear para que muestre enteros si es posible (ej: 2 en lugar de 2.0)
+                String value;
+                double num = ejemploMatriz[i][j];
+                // Usar tolerancia para ver si es un entero (Ej: 2.0000000001 -> 2)
+                if (Math.abs(num - Math.round(num)) < 1e-9) { 
+                     value = String.valueOf((int) Math.round(num));
+                } else {
+                     value = df.format(num);
+                }
+                camposEcuaciones.get(i).get(j).setText(value);
+            }
+            // Vector b
+            String valueB;
+            double numB = ejemploMatriz[i][n];
+            if (Math.abs(numB - Math.round(numB)) < 1e-9) {
+                 valueB = String.valueOf((int) Math.round(numB));
+            } else {
+                 valueB = df.format(numB);
+            }
+            camposResultados.get(i).setText(valueB);
+        }
+        
+        // 3. Forzar la transferencia a la matriz principal
+        if (forceTransfer) {
+            transferirAcuadros();
+        }
+    }
+
+    private void cambiarTamanoMatriz() {
+        String seleccion = (String) cmbTamano.getSelectedItem();
+        int nuevoTamano = Integer.parseInt(seleccion.substring(0, seleccion.indexOf('x')));
+
+        if (nuevoTamano != tamanoActual) {
+            tamanoActual = nuevoTamano;
+            
+            JScrollPane pScroll = (JScrollPane) ((JPanel) ((BorderLayout) tabbedPane.getComponentAt(0).getLayout()).getLayoutComponent(BorderLayout.CENTER)).getComponent(0);
+            JPanel pEntradaGeneral = (JPanel) pScroll.getViewport().getView();
+            
+            if (pEntradaGeneral.getComponentCount() > 0) {
+                 JPanel pEntradaTexto = (JPanel) pEntradaGeneral.getComponent(0);
+                 JPanel ecuacionFieldsPanel = (JPanel) ((BorderLayout) pEntradaTexto.getLayout()).getLayoutComponent(BorderLayout.CENTER);
+
+                 if (ecuacionFieldsPanel != null) {
+                    initializeInputPanel(tamanoActual, ecuacionFieldsPanel); 
+                 }
+            }
+            
+            inicializarMatriz(tamanoActual); 
+            // Se elimina el llamado a limpiarCampos() para no interferir con la carga del historial.
+        }
+    }
+
+    private void initializeInputPanel(int n, JPanel containerPanel) {
+        containerPanel.removeAll();
+        camposEcuaciones.clear();
+        camposResultados.clear();
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        String[] vars = {"X", "Y", "Z", "X4", "X5", "X6", "X7", "X8", "X9", "X10"};
+        for (int j = 0; j < n; j++) {
+            JLabel lblVar = new JLabel(vars[j], SwingConstants.CENTER); 
+            lblVar.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            lblVar.setForeground(COLOR_TEXTO_MATRIZ);
+            gbc.gridx = j; 
+            gbc.gridy = 0;
+            containerPanel.add(lblVar, gbc);
+        }
+        JLabel lblB = new JLabel("B", SwingConstants.CENTER);
+        lblB.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblB.setForeground(COLOR_BOTON_SISTEMA); 
+        gbc.gridx = n + 1; 
+        gbc.gridy = 0;
+        containerPanel.add(lblB, gbc);
+
+        // --- LISTENER DE FOCO PARA SABER QUÉ CAMPO ESTÁ ACTIVO Y ABRIR TECLADO ---
+        FocusListener focusListener = new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                campoActivo = (JTextField) e.getComponent();
+                abrirTecladoNumerico(); // Apertura automática del teclado al enfocar
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                // Se mantiene el campoActivo hasta que se enfoque otro, útil para el teclado.
+            }
+        };
+        
+        // --- KEYLISTENER PARA NAVEGACIÓN CON ENTER EN LAS ECUACIONES ---
+        KeyListener keyListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {}
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    navegarAlSiguienteCampo();
+                    e.consume(); // Consumir el evento para que no se procese por defecto
+                }
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {}
+        };
+        // -----------------------------------------------------------
+
+        for (int i = 0; i < n; i++) {
+            List<JTextField> filaCampos = new ArrayList<>();
+            
+            for (int j = 0; j < n; j++) {
+                JTextField campoCoeficiente = new JTextField(5); 
+                campoCoeficiente.setFont(new Font("Consolas", Font.PLAIN, 16));
+                campoCoeficiente.setHorizontalAlignment(JTextField.CENTER);
+                campoCoeficiente.addFocusListener(focusListener); 
+                campoCoeficiente.addKeyListener(keyListener); 
+                filaCampos.add(campoCoeficiente);
+                
+                gbc.gridx = j;
+                gbc.gridy = i + 1; 
+                containerPanel.add(campoCoeficiente, gbc);
+            }
+            camposEcuaciones.add(filaCampos);
+
+            JLabel eqLabel = new JLabel("=", SwingConstants.CENTER);
+            eqLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+            gbc.gridx = n;
+            gbc.gridy = i + 1;
+            containerPanel.add(eqLabel, gbc);
+
+            JTextField resultadoField = new JTextField(5); 
+            resultadoField.setFont(new Font("Consolas", Font.PLAIN, 16));
+            resultadoField.setHorizontalAlignment(JTextField.CENTER);
+            resultadoField.setBackground(COLOR_FONDO_B); 
+            resultadoField.addFocusListener(focusListener); 
+            resultadoField.addKeyListener(keyListener); 
+            camposResultados.add(resultadoField);
+            
+            gbc.gridx = n + 1;
+            gbc.gridy = i + 1;
+            containerPanel.add(resultadoField, gbc);
+        }
+        
+        containerPanel.revalidate();
+        containerPanel.repaint();
+    }
+
+    private void transferirAcuadros() {
+        int n = tamanoActual;
+
+        try {
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    String text = camposEcuaciones.get(i).get(j).getText().trim();
+                    
+                    String valor;
+                    if (text.isEmpty()) {
+                        valor = "0"; 
+                    } else {
+                        valor = parseCoeficiente(text); 
+                    }
+                    
+                    campos[i][j].setText(valor);
+                }
+
+                String textB = camposResultados.get(i).getText().trim();
+                String valorB = textB.isEmpty() ? "0" : textB; 
+                
+                Double.parseDouble(valorB); 
+                
+                campos[i][n].setText(valorB);
+            }
+
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "¡ERROR! Formato de número inválido. Asegúrate de solo usar números válidos o expresiones literales simples (x, -y, 2z).", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+              JOptionPane.showMessageDialog(this, "Ocurrió un error inesperado al transferir los datos: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private String parseCoeficiente(String text) throws NumberFormatException {
+        try {
+            Double.parseDouble(text);
+            return text;
+        } catch (NumberFormatException e) {
+        }
+        
+        String cleanText = text.toLowerCase().trim();
+        
+        if (cleanText.matches("^[a-z].*$")) { 
+            return "1";
+        }
+        
+        if (cleanText.matches("^\\-([a-z].*)$")) { 
+            return "-1";
+        }
+
+        String numberPart = cleanText.replaceAll("[a-z].*", "").trim();
+        
+        if (numberPart.isEmpty() || numberPart.equals("+")) {
+            return "1"; 
+        } else if (numberPart.equals("-")) {
+            return "-1";
+        } else {
+            Double.parseDouble(numberPart); 
+            return numberPart;
+        }
+    }
+
+
+    private void inicializarMatriz(int n) {
+        panelMatrizContainer.removeAll();
+
+        JPanel panelMatrizTotal = new JPanel(new GridBagLayout());
+        panelMatrizTotal.setBackground(Color.WHITE);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.BOTH;
+
+        int columnasTotales = n + 1;
+        
+        String[] vars = {"X", "Y", "Z", "X4", "X5", "X6", "X7", "X8", "X9", "X10"};
+        
+        for (int j = 0; j < n; j++) {
+            JLabel lblVar = new JLabel(vars[j], SwingConstants.CENTER); 
+            lblVar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            lblVar.setForeground(COLOR_TEXTO_MATRIZ);
+            gbc.gridx = j; 
+            gbc.gridy = 0;
+            panelMatrizTotal.add(lblVar, gbc);
+        }
+
+        JLabel lblB = new JLabel("Términos independientes", SwingConstants.CENTER);
+        lblB.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblB.setForeground(COLOR_BOTON_SISTEMA); 
+        gbc.gridx = n + 1; 
+        gbc.gridy = 0;
+        panelMatrizTotal.add(lblB, gbc);
+        
+        campos = new JTextField[n][columnasTotales];
+        
+        // --- LISTENER DE FOCO PARA SABER QUÉ CAMPO ESTÁ ACTIVO EN LA MATRIZ Y ABRIR TECLADO ---
+        FocusListener focusListener = new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                campoActivo = (JTextField) e.getComponent();
+                abrirTecladoNumerico(); // Apertura automática del teclado al enfocar
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+            }
+        };
+        
+        // --- KEYLISTENER PARA NAVEGACIÓN CON ENTER EN LA MATRIZ ---
+        KeyListener keyListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {}
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    navegarAlSiguienteCampo();
+                    e.consume(); 
+                }
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {}
+        };
+        // ----------------------------------------------------------------------
+
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < columnasTotales; j++) {
+                JTextField campo = new JTextField();
+                campos[i][j] = campo;
+                campo.setHorizontalAlignment(JTextField.CENTER);
+                campo.setFont(new Font("Consolas", Font.BOLD, 16)); 
+                campo.setPreferredSize(new Dimension(65, 30));
+                campo.setForeground(COLOR_TEXTO_MATRIZ);
+                campo.addFocusListener(focusListener); 
+                campo.addKeyListener(keyListener); 
+                
+                gbc.gridy = i + 1; 
+                
+                if (j < n) { 
+                    gbc.gridx = j;
+                    panelMatrizTotal.add(campo, gbc);
+                } else { 
+                    campo.setBackground(COLOR_FONDO_B);
+                    
+                    JLabel separador = new JLabel("=", SwingConstants.CENTER);
+                    separador.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                    separador.setForeground(COLOR_TEXTO_MATRIZ);
+                    gbc.gridx = n;
+                    panelMatrizTotal.add(separador, gbc);
+                    
+                    gbc.gridx = n + 1;
+                    panelMatrizTotal.add(campo, gbc);
+                }
+            }
+        }
+        
+        panelMatrizContainer.add(panelMatrizTotal, new GridBagConstraints());
+        panelMatrizContainer.revalidate();
+        panelMatrizContainer.repaint();
+    }
+    
+    private void limpiarCampos() {
+        // 1. Limpiar campos de la matriz principal (JTable)
+        for (int i = 0; i < tamanoActual; i++) {
+            for (int j = 0; j < tamanoActual + 1; j++) {
+                campos[i][j].setText("");
+            }
+        }
+        // 2. Limpiar campos de ecuaciones por término
+        for (List<JTextField> fila : camposEcuaciones) {
+            for (JTextField campo : fila) {
+                campo.setText("");
+            }
+        }
+        // 3. Limpiar campos de resultados 'b' de las ecuaciones
+        for (JTextField campo : camposResultados) {
+            campo.setText("");
+        }
+        // 4. Limpiar áreas de resultados
+        resultadoSistemaArea.setText("");
+        resultadoInversaArea.setText("");
+        tabbedPane.setSelectedIndex(0);
+        
+        // 5. Limpiar campo activo
+        campoActivo = null;
+        
+        // 6. Ocultar teclado fijo si está visible
+        if (panelTecladoFijo != null && panelTecladoFijo.isVisible()) {
+            panelTecladoFijo.setVisible(false);
+        }
+    }
+    
+    // --- MÉTODO PARA MOSTRAR TECLADO NUMÉRICO FIJO ---
+    private void abrirTecladoNumerico() {
+        if (panelTecladoFijo != null) {
+            panelTecladoFijo.setVisible(true);
+        }
+    }
+    // ---------------------------------------------------------------------------------
+    
+    /**
+     * Navega al siguiente JTextField en el orden de la interfaz.
+     */
+    private void navegarAlSiguienteCampo() {
+        if (campoActivo == null) return;
+
+        int n = tamanoActual;
+
+        // 1. Buscar en camposEcuaciones
+        for (int i = 0; i < n; i++) {
+            List<JTextField> fila = camposEcuaciones.get(i);
+            for (int j = 0; j < n; j++) {
+                if (fila.get(j) == campoActivo) {
+                    if (j < n - 1) {
+                        fila.get(j + 1).requestFocusInWindow();
+                        return;
+                    } else {
+                        // Pasar al campoResultado
+                        camposResultados.get(i).requestFocusInWindow();
+                        return;
+                    }
+                }
+            }
+            if (camposResultados.get(i) == campoActivo) {
+                if (i < n - 1) {
+                    // Pasar al primer campo de la siguiente fila
+                    camposEcuaciones.get(i + 1).get(0).requestFocusInWindow();
+                    return;
+                }
+            }
+        }
+
+        // 2. Buscar en campos (Matriz Aumentada)
+        int colTotal = n + 1;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < colTotal; j++) {
+                if (campos[i][j] == campoActivo) {
+                    if (j < colTotal - 1) {
+                        campos[i][j + 1].requestFocusInWindow();
+                        return;
+                    } else if (i < n - 1) {
+                        // Pasar al primer campo de la siguiente fila
+                        campos[i + 1][0].requestFocusInWindow();
+                        return;
+                    } else {
+                        // * FIN DE LA MATRIZ: CERRAR TECLADO AUTOMÁTICAMENTE *
+                        
+                        // Fin de la matriz, transferir y pasar al botón Resolver Sistema
+                        transferirAcuadros();
+                        
+                        // Ocultar teclado numérico
+                        if (panelTecladoFijo != null && panelTecladoFijo.isVisible()) {
+                            panelTecladoFijo.setVisible(false);
+                        }
+                        
+                        // Asumiendo que el botón "Resolver Sistema" es el primero en panelAcciones
+                        ((JPanel)((BorderLayout)getContentPane().getLayout()).getLayoutComponent(BorderLayout.SOUTH))
+                                .getComponent(0).requestFocusInWindow();
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // Si no es un campo de la matriz, enfocar el siguiente elemento por defecto.
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().focusNextComponent();
+    }
+    // -------------------------------------------------
+    
+    // --- MÉTODOS DE LÓGICA DE CÁLCULO UNIFICADO --- 
+    
+    private void calcularAmbosResultados(int tabIndexToSelect) {
+        resolverSistema();
+        resolverInversa();
+        tabbedPane.setSelectedIndex(tabIndexToSelect + 1); 
+    }
+
+    private void resolverSistema() {
+        int n = tamanoActual;
+        double[][] matriz = new double[n][n + 1]; 
+        boolean b_vacio = true; 
+
+        try {
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    String text = campos[i][j].getText();
+                    matriz[i][j] = text.isEmpty() ? 0.0 : Double.parseDouble(text);
+                }
+                String textB = campos[i][n].getText();
+                double valorB = textB.isEmpty() ? 0.0 : Double.parseDouble(textB);
+                matriz[i][n] = valorB;
+                
+                if (Math.abs(valorB) > TOLERANCE) {
+                    b_vacio = false;
+                }
+            }
+        } catch (NumberFormatException ex) {
+            resultadoSistemaArea.setText("¡ERROR! Formato de número inválido en la matriz. Asegúrate de solo usar números.");
+            return;
+        }
+
+        if (b_vacio) {
+            _calcularInversa(resultadoSistemaArea, true); 
+            return; 
+        }
+        
+        double[][] matrizCopia = copiarMatriz(matriz);
+        StringBuilder proceso = new StringBuilder();
+        proceso.append("====================================\n");
+        proceso.append("  Resolviendo Sistema (Ax=b)\n");
+        proceso.append("====================================\n");
+
+        proceso.append("Matriz Aumentada Inicial [A | b]:\n").append(matrizToString(matrizCopia, n)); 
+        proceso.append("\n\n"); 
+        double[] sol = gaussJordan(matrizCopia, n, true, proceso);
+
+        proceso.append("\n\n====================================\n");
+
+        if (sol != null) {
+            proceso.append("  Matriz Final en Forma Reducida [I | Solución]\n");
+            proceso.append("====================================\n");
+            proceso.append(matrizToString(matrizCopia, n)); 
+            proceso.append("\n\n====================================\n");
+            proceso.append("       Soluciones Finales\n");
+            proceso.append("====================================\n");
+            DecimalFormat df = new DecimalFormat("0.######"); 
+            for (int i = 0; i < sol.length; i++) {
+                proceso.append("x").append(i + 1).append(" = ").append(df.format(sol[i])).append("\n");
+            }
+        } else {
+            proceso.append("Sistema sin Solución Única\n");
+            proceso.append("====================================\n");
+            proceso.append("El sistema es inconsistente o tiene infinitas soluciones.");
+        }
+        resultadoSistemaArea.setText(proceso.toString());
+        resultadoSistemaArea.setCaretPosition(0); 
+    }
+
+    private void resolverInversa() {
+        _calcularInversa(resultadoInversaArea, false);
+    }
+    
+    private void _calcularInversa(JTextArea area, boolean showSystemOverride) {
+        int n = tamanoActual;
+        double[][] matrizAumentada = new double[n][2 * n]; 
+
+        try {
+            for(int i = 0; i < n; i++) {
+                for(int j = 0; j < n; j++) {
+                    String text = campos[i][j].getText();
+                    matrizAumentada[i][j] = text.isEmpty() ? 0.0 : Double.parseDouble(text);
+                }
+                matrizAumentada[i][n + i] = 1.0; 
+            }
+        } catch (NumberFormatException ex) {
+            area.setText("¡ERROR! Formato de número inválido en la matriz A. Asegúrate de solo usar números.");
+            return;
+        }
+
+        StringBuilder proceso = new StringBuilder();
+        proceso.append("====================================\n");
+        
+        if (showSystemOverride) {
+            proceso.append("⚠️ CÁLCULO MODIFICADO POR AUSENCIA DE B\n");
+            proceso.append("====================================\n");
+            proceso.append("Debido a que la columna de 'Términos Independientes' (b) estaba vacía,\n");
+            proceso.append("el sistema ha asumido que se desea calcular la *Matriz Inversa* (A⁻¹).\n");
+            proceso.append("====================================\n");
+        } else {
+            proceso.append("  Calculando Matriz Inversa (A⁻¹)\n");
+            proceso.append("====================================\n");
+        }
+        
+        proceso.append("Matriz Aumentada Inicial [A | I]:\n").append(matrizToString(matrizAumentada, n));
+        proceso.append("\n\n"); 
+
+        double[] resultadoExito = gaussJordan(matrizAumentada, n, false, proceso);
+        boolean exito = resultadoExito != null;
+
+        proceso.append("\n\n====================================\n");
+
+        if (exito) {
+            proceso.append("  Matriz Final [I | A⁻¹]\n");
+            proceso.append("====================================\n");
+            proceso.append(matrizToString(matrizAumentada, n)); 
+            proceso.append("\n\n====================================\n");
+            proceso.append("       Matriz Inversa (A⁻¹)\n");
+            proceso.append("====================================\n");
+            proceso.append(extraerInversa(matrizAumentada, n));
+        } else {
+            proceso.append("Matriz No Invertible (Singular)\n");
+            proceso.append("====================================\n");
+            proceso.append("El determinante es cero. La matriz no tiene inversa.");
+        }
+
+        area.setText(proceso.toString());
+        area.setCaretPosition(0); 
+    }
+
+    private double[][] copiarMatriz(double[][] original) {
+        double[][] copia = new double[original.length][original[0].length];
+        for (int i = 0; i < original.length; i++) {
+            System.arraycopy(original[i], 0, copia[i], 0, original[i].length);
+        }
+        return copia;
+    }
+    
+    private String matrizToString(double[][] M, int n) {
+        StringBuilder sb = new StringBuilder();
+        // Reducimos decimales a 5 para mejor visualización en JTextArea
+        DecimalFormat df = new DecimalFormat("0.#####"); 
+        
+        int colTotal = M[0].length;
+        int anchoCelda = 10; 
+        
+        String lineaSeparacion = "+";
+        for (int j = 0; j < colTotal; j++) {
+            lineaSeparacion += String.format("%" + anchoCelda + "s", "").replace(' ', '-');
+            if (j == n - 1 && colTotal == n + 1) { 
+                lineaSeparacion += "|";
+            } else if (j == n - 1 && colTotal == 2 * n) { 
+                lineaSeparacion += "||";
+            } else {
+                lineaSeparacion += "+";
+            }
+        }
+        
+        if (colTotal == 2 * n) {
+            lineaSeparacion = lineaSeparacion.substring(0, lineaSeparacion.length() - 1) + "+";
+        }
+        if (colTotal == n + 1) {
+             lineaSeparacion = lineaSeparacion.replace("|+", "+");
+        }
+
+        for (int i = 0; i < n; i++) {
+            sb.append(lineaSeparacion).append("\n"); 
+            sb.append("|");
+            
+            for (int j = 0; j < colTotal; j++) {
+                double valor = Math.abs(M[i][j]) < TOLERANCE ? 0.0 : M[i][j];
+                String val = df.format(valor);
+                
+                sb.append(String.format("%" + anchoCelda + "s", val)); 
+                
+                if (j == n - 1 && colTotal == n + 1) { 
+                    sb.append(" |");
+                } else if (j == n - 1 && colTotal == 2 * n) { 
+                    sb.append(" ||");
+                } else {
+                    sb.append("|");
+                }
+            }
+            sb.append("\n");
+        }
+        
+        sb.append(lineaSeparacion).append("\n"); 
+        
+        return sb.toString();
+    }
+
+
+    private String extraerInversa(double[][] M, int n) {
+        StringBuilder sb = new StringBuilder();
+        // Reducimos decimales a 5 para mejor visualización en JTextArea
+        DecimalFormat df = new DecimalFormat("0.#####"); 
+        
+        int anchoCelda = 10;
+        
+        String lineaSeparacion = "+";
+        for (int j = n; j < 2 * n; j++) {
+            lineaSeparacion += String.format("%" + anchoCelda + "s", "").replace(' ', '-');
+            lineaSeparacion += "+";
+        }
+        
+        for (int i = 0; i < n; i++) {
+            sb.append(lineaSeparacion).append("\n");
+            sb.append("|");
+            for (int j = n; j < 2 * n; j++) {
+                double valor = Math.abs(M[i][j]) < TOLERANCE ? 0.0 : M[i][j];
+                String val = df.format(valor);
+                sb.append(String.format("%" + anchoCelda + "s", val)); 
+                sb.append("|");
+            }
+            sb.append("\n");
+        }
+        sb.append(lineaSeparacion).append("\n");
+        return sb.toString();
+    }
+
+    private double[] gaussJordan(double[][] M, int n, boolean isSistema, StringBuilder proceso) {
+        DecimalFormat df = new DecimalFormat("0.#####");
+        int colTotal = M[0].length; 
+
+        for (int k = 0; k < n; k++) {
+            proceso.append("\n--- FASE ").append(k + 1).append(": Pivote en (").append(k + 1).append(", ").append(k + 1).append(") ---\n\n");
+            
+            int i_max = k;
+            for (int i = k + 1; i < n; i++) {
+                if (Math.abs(M[i][k]) > Math.abs(M[i_max][k])) {
+                    i_max = i;
+                }
+            }
+            
+            if (i_max != k) {
+                double[] temp = M[k];
+                M[k] = M[i_max];
+                M[i_max] = temp;
+                proceso.append("-> Operación: Intercambio F").append(k + 1).append(" <-> F").append(i_max + 1).append("\n");
+                proceso.append(matrizToString(M, n));
+                proceso.append("\n\n"); 
+            }
+            
+            if (Math.abs(M[k][k]) < TOLERANCE) { 
+                proceso.append("--- Matriz Singular o Sistema Inconsistente (División por cero) --- \n");
+                return null; 
+            }
+            
+            double divisor = M[k][k];
+            if (Math.abs(divisor - 1.0) > TOLERANCE) { 
+                for (int j = k; j < colTotal; j++) { 
+                    M[k][j] /= divisor;
+                }
+                proceso.append("-> Operación: Normalizar F").append(k + 1).append(" = F").append(k + 1).append(" / ").append(df.format(divisor)).append("\n");
+                proceso.append(matrizToString(M, n));
+                proceso.append("\n\n"); 
+            }
+            
+            for (int i = 0; i < n; i++) {
+                if (i != k) {
+                    double factor = M[i][k];
+                    if (Math.abs(factor) > TOLERANCE) { 
+                        for (int j = k; j < colTotal; j++) { 
+                            M[i][j] -= factor * M[k][j];
+                        }
+                        proceso.append("-> Operación: Eliminar F").append(i + 1).append(" = F").append(i + 1).append(" - ").append(df.format(factor)).append(" * F").append(k + 1).append("\n");
+                        proceso.append(matrizToString(M, n));
+                        proceso.append("\n\n"); 
+                    }
+                }
+            }
+            if (proceso.length() >= 2 && proceso.substring(proceso.length() - 2).equals("\n\n")) {
+                proceso.setLength(proceso.length() - 2); 
+            }
+        }
+        
+        if (isSistema) {
+            double[] soluciones = new double[n];
+            for (int i = 0; i < n; i++) {
+                soluciones[i] = M[i][n]; 
+            }
+            return soluciones;
+        }
+        return new double[n]; 
+    }
+
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+            } catch (Exception e) {
+            }
+            new CalculadoraGaussJordanFinal().setVisible(true);
+        });
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+    }
+    // =========================================================================
+    // === CLASE INTERNA PARA MODELAR EL REGISTRO DE HISTORIAL ===
+    // =========================================================================
+    private static class MatrizHistorial {
+        private final double[][] matriz; 
+        private final int tamano; 
+        private final Date fecha;
+        
+        public MatrizHistorial(double[][] matriz, int tamano, Date fecha) {
+            this.tamano = tamano;
+            this.fecha = fecha;
+            
+            this.matriz = new double[tamano][tamano + 1];
+            for (int i = 0; i < tamano; i++) {
+                System.arraycopy(matriz[i], 0, this.matriz[i], 0, tamano + 1);
+            }
+        }
+
+        public double[][] getMatriz() {
+            return matriz;
+        }
+
+        public int getTamano() {
+            return tamano;
+        }
+
+        public Date getFecha() {
+            return fecha;
+        }
+        
+        public String matrizToString(int startCol, int width) {
+            StringBuilder sb = new StringBuilder();
+            DecimalFormat df = new DecimalFormat("0.##"); 
+            
+            for (int i = 0; i < tamano; i++) {
+                sb.append("[");
+                for (int j = 0; j < width; j++) {
+                    double valor = matriz[i][startCol + j];
+                    sb.append(df.format(valor));
+                    if (j < width - 1) {
+                        sb.append(", ");
+                    }
+                }
+                sb.append("]");
+                if (i < tamano - 1) {
+                    sb.append(" | "); 
+                }
+            }
+            return sb.toString();
+        }
+    }
+    
+    // =========================================================================
+    // === MÉTODO PARA CREAR EL PANEL DE TECLADO NUMÉRICO FIJO ===
+    // =========================================================================
+    private JPanel crearTecladoFijo() {
+        // Colores para el teclado (AJUSTADOS A NEGRO Y NARANJA)
+        final Color COLOR_TECLADO_FONDO = new Color(33, 33, 33); 
+        final Color COLOR_NUMERO = new Color(255, 255, 255); 
+        final Color COLOR_BOTON_NUMERO = new Color(66, 66, 66); 
+        final Color COLOR_OPERADOR = new Color(255, 140, 0); 
+
+        JPanel panelBotones = new JPanel(new GridLayout(4, 4, 5, 5));
+        panelBotones.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panelBotones.setBackground(COLOR_TECLADO_FONDO);
+        
+        String[] botones = {
+            "7", "8", "9", "Borrar",
+            "4", "5", "6", "+",
+            "1", "2", "3", "-",
+            "0", ".", "ENTER", "C" 
+        };
+        
+        Font fontBotones = new Font("Segoe UI", Font.BOLD, 20);
+
+        // ActionListener para el panel de botones fijo
+        ActionListener tecladoListener = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String comando = e.getActionCommand();
+                JTextField campo = campoActivo; 
+                
+                if (campo == null) {
+                    if (!camposEcuaciones.isEmpty() && !camposEcuaciones.get(0).isEmpty()) {
+                         camposEcuaciones.get(0).get(0).requestFocusInWindow();
+                         campo = campoActivo; 
+                    }
+                    if (campo == null) return; 
+                }
+                
+                String textoActual = campo.getText();
+                int caretPos = campo.getCaretPosition();
+                
+                try {
+                    switch (comando) {
+                        case "0":
+                        case "1":
+                        case "2":
+                        case "3":
+                        case "4":
+                        case "5":
+                        case "6":
+                        case "7":
+                        case "8":
+                        case "9":
+                            // Insertar el número
+                            campo.setText(textoActual.substring(0, caretPos) + comando + textoActual.substring(caretPos));
+                            campo.setCaretPosition(caretPos + 1);
+                            
+                            // Deferir la navegación con SwingUtilities.invokeLater
+                            SwingUtilities.invokeLater(() -> {
+                                navegarAlSiguienteCampo(); 
+                            });
+                            return; 
+
+                        case ".":
+                            // Insertar el punto si no existe
+                            if (!textoActual.contains(".")) {
+                               campo.setText(textoActual.substring(0, caretPos) + comando + textoActual.substring(caretPos));
+                               campo.setCaretPosition(caretPos + 1);
+                               
+                               // Deferir la navegación con SwingUtilities.invokeLater
+                               SwingUtilities.invokeLater(() -> {
+                                    navegarAlSiguienteCampo();
+                               });
+                               return; 
+                            }
+                            break;
+                            
+                        case "+":
+                        case "-":
+                             // Solo permitir '+' o '-' si el campo está vacío y el cursor está al inicio
+                            if (textoActual.isEmpty() && caretPos == 0) {
+                                campo.setText(comando);
+                                campo.setCaretPosition(1);
+                            }
+                            break;
+                            
+                        case "Borrar":
+                            // Eliminar el carácter anterior al cursor
+                            if (caretPos > 0) {
+                                campo.setText(textoActual.substring(0, caretPos - 1) + textoActual.substring(caretPos));
+                                campo.setCaretPosition(caretPos - 1);
+                            }
+                            break;
+                            
+                        case "C":
+                            // Limpiar todo el campo y OCULTAR el teclado
+                            campo.setText("");
+                            panelTecladoFijo.setVisible(false); 
+                            break; 
+                            
+                        case "ENTER":
+                            // Comportamiento manual de ENTER: OCULTAR y avanzar
+                            panelTecladoFijo.setVisible(false);
+                            navegarAlSiguienteCampo();
+                            return; 
+                    }
+                } catch (Exception ex) {
+                    // Manejar cualquier excepción 
+                }
+                
+                // Re-enfocar el campo activo
+                campo.requestFocusInWindow();
+            }
+        };
+
+        for (String texto : botones) {
+            JButton b = new JButton(texto);
+            b.setFont(fontBotones);
+            b.setFocusPainted(false);
+            b.addActionListener(tecladoListener);
+            
+            if (texto.matches("[0-9]") || texto.equals(".")) {
+                b.setBackground(COLOR_BOTON_NUMERO); 
+                b.setForeground(COLOR_NUMERO);
+            } else if (texto.equals("ENTER")) {
+                b.setBackground(COLOR_OPERADOR); 
+                b.setForeground(Color.WHITE);
+            } else if (texto.equals("Borrar") || texto.equals("C")) {
+                b.setBackground(COLOR_OPERADOR.darker()); 
+                b.setForeground(Color.WHITE);
+            } else { // Operadores (+, -)
+                b.setBackground(COLOR_OPERADOR); 
+                b.setForeground(Color.WHITE);
+            }
+            
+            panelBotones.add(b);
+        }
+        
+        // Envolver el panel de botones en un contenedor con borde y tamaño fijo
+        JPanel panelContenedor = new JPanel(new BorderLayout());
+        panelContenedor.add(panelBotones, BorderLayout.NORTH); 
+        panelContenedor.setBorder(BorderFactory.createTitledBorder(
+              BorderFactory.createLineBorder(COLOR_PRIMARIO, 1), 
+              "⌨️ Teclado Numérico Fijo", 
+              0, 2, new Font("Segoe UI", Font.BOLD, 14), COLOR_PRIMARIO));
+        panelContenedor.setBackground(COLOR_FONDO);
+        // Ajustar el tamaño para que quepa bien a la derecha
+        panelContenedor.setPreferredSize(new Dimension(280, 350)); 
+
+        return panelContenedor;
+    }
+}
