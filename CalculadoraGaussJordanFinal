@@ -693,8 +693,9 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
 
         JPanel panelMatrizTotal = new JPanel(new GridBagLayout());
         panelMatrizTotal.setBackground(Color.WHITE);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
+GridBagConstraints gbc = new GridBagConstraints();
+        // CAMBIO 1: Reducir el espacio horizontal (izquierda y derecha) de 5 a 2 píxeles
+        gbc.insets = new Insets(5, 2, 5, 2); 
         gbc.fill = GridBagConstraints.BOTH;
 
         int columnasTotales = n + 1;
@@ -1193,9 +1194,64 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
     public void actionPerformed(ActionEvent e) {
     }
 
-    private void navegarAnteriorCampo() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+private void navegarAnteriorCampo() {
+    if (campoActivo == null) {
+        return;
     }
+
+    int n = tamanoActual;
+    int colTotal = n + 1; // n (Matriz A) + 1 (Vector b)
+
+    // 1. Buscar en campos (Matriz Aumentada)
+    // Se recorre en el mismo orden que 'navegarAlSiguienteCampo' para tener un flujo coherente.
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < colTotal; j++) {
+            if (campos[i][j] == campoActivo) {
+                if (j > 0) {
+                    // Mover a la casilla anterior en la misma fila (j-1)
+                    campos[i][j - 1].requestFocusInWindow();
+                    return;
+                } else if (i > 0) {
+                    // Si es la primera columna (j=0), ir a la última columna de la fila anterior (i-1)
+                    campos[i - 1][colTotal - 1].requestFocusInWindow();
+                    return;
+                }
+                // Si es el primer campo de la matriz (i=0, j=0), detener la navegación.
+                return;
+            }
+        }
+    }
+
+    // 2. Buscar en campos de Ecuaciones por Término (camposEcuaciones y camposResultados)
+    // El flujo es: (b) <- (último coeficiente de A)
+    for (int i = 0; i < n; i++) {
+        List<JTextField> filaEcuaciones = camposEcuaciones.get(i);
+        
+        // Coeficientes A
+        for (int j = 0; j < n; j++) {
+            if (filaEcuaciones.get(j) == campoActivo) {
+                if (j > 0) {
+                    // Mover a la izquierda en la misma fila (A)
+                    filaEcuaciones.get(j - 1).requestFocusInWindow();
+                    return;
+                } else if (i > 0) {
+                    // Si es el primer coeficiente, ir al campo resultado 'b' de la fila anterior
+                    camposResultados.get(i - 1).requestFocusInWindow();
+                    return;
+                }
+                // Si es el primer campo de la primera fila, detener la navegación.
+                return;
+            }
+        }
+        
+        // Resultado b
+        if (camposResultados.get(i) == campoActivo) {
+            // Mover al último coeficiente de la misma fila (A)
+            filaEcuaciones.get(n - 1).requestFocusInWindow();
+            return;
+        }
+    }
+}
     // =========================================================================
     // === CLASE INTERNA PARA MODELAR EL REGISTRO DE HISTORIAL ===
     // =========================================================================
