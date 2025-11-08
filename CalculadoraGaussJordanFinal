@@ -43,6 +43,9 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
     private final List<JTextField> camposResultados; 
     private int tamanoActual = 3; 
     
+    // Guardar referencia al panel de ecuaciones (FIX: campo de instancia)
+    private JPanel ecuacionFieldsPanel;
+    
     // --- VARIABLES PARA EL TECLADO VIRTUAL Y NAVEGACIÓN (AHORA PANEL FIJO) ---
     private JTextField campoActivo; 
     private JPanel panelTecladoFijo; 
@@ -124,7 +127,8 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
               "✍️ Escribir Ejercicio (Coeficientes por Término)", 
               0, 2, new Font("Segoe UI", Font.BOLD, 14), COLOR_PRIMARIO));
         
-        JPanel ecuacionFieldsPanel = new JPanel(new GridBagLayout());
+        // Guardar la referencia en el campo de la clase (FIX)
+        ecuacionFieldsPanel = new JPanel(new GridBagLayout());
         ecuacionFieldsPanel.setBackground(Color.WHITE);
         
         camposEcuaciones = new ArrayList<>();
@@ -516,16 +520,9 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
         if (nuevoTamano != tamanoActual) {
             tamanoActual = nuevoTamano;
             
-            JScrollPane pScroll = (JScrollPane) ((JPanel) ((BorderLayout) tabbedPane.getComponentAt(0).getLayout()).getLayoutComponent(BorderLayout.CENTER)).getComponent(0);
-            JPanel pEntradaGeneral = (JPanel) pScroll.getViewport().getView();
-            
-            if (pEntradaGeneral.getComponentCount() > 0) {
-                 JPanel pEntradaTexto = (JPanel) pEntradaGeneral.getComponent(0);
-                 JPanel ecuacionFieldsPanel = (JPanel) ((BorderLayout) pEntradaTexto.getLayout()).getLayoutComponent(BorderLayout.CENTER);
-
-                 if (ecuacionFieldsPanel != null) {
-                    initializeInputPanel(tamanoActual, ecuacionFieldsPanel); 
-                 }
+            // FIX: usar la referencia guardada del panel de ecuaciones en lugar de recorrer componentes
+            if (ecuacionFieldsPanel != null) {
+                initializeInputPanel(tamanoActual, ecuacionFieldsPanel);
             }
             
             inicializarMatriz(tamanoActual); 
