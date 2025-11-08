@@ -1192,6 +1192,10 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
     @Override
     public void actionPerformed(ActionEvent e) {
     }
+
+    private void navegarAnteriorCampo() {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
     // =========================================================================
     // === CLASE INTERNA PARA MODELAR EL REGISTRO DE HISTORIAL ===
     // =========================================================================
@@ -1262,7 +1266,7 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
             "7", "8", "9", "Borrar",
             "4", "5", "6", "+",
             "1", "2", "3", "-",
-            "0", ".", "ENTER", "C" 
+            "0", ".", "E", "X"
         };
         
         Font fontBotones = new Font("Segoe UI", Font.BOLD, 20);
@@ -1384,15 +1388,108 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
         
         // Envolver el panel de botones en un contenedor con borde y tamaño fijo
         JPanel panelContenedor = new JPanel(new BorderLayout());
-        panelContenedor.add(panelBotones, BorderLayout.NORTH); 
-        panelContenedor.setBorder(BorderFactory.createTitledBorder(
-              BorderFactory.createLineBorder(COLOR_PRIMARIO, 1), 
-              "⌨️ Teclado Numérico Fijo", 
-              0, 2, new Font("Segoe UI", Font.BOLD, 14), COLOR_PRIMARIO));
-        panelContenedor.setBackground(COLOR_FONDO);
-        // Ajustar el tamaño para que quepa bien a la derecha
-        panelContenedor.setPreferredSize(new Dimension(280, 350)); 
+JPanel buttonsWrapper = new JPanel(new BorderLayout());
+buttonsWrapper.setOpaque(false);
+buttonsWrapper.add(panelBotones, BorderLayout.CENTER);
 
-        return panelContenedor;
+JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 6));
+footer.setOpaque(false);
+
+JButton btnLeft = new JButton("←");
+btnLeft.setFont(new Font("Segoe UI", Font.BOLD, 16));
+btnLeft.setFocusPainted(false);
+btnLeft.setBackground(new Color(52,152,219));
+btnLeft.setForeground(Color.WHITE);
+btnLeft.addActionListener(ev -> {
+    SwingUtilities.invokeLater(() -> {
+        Component owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        if (owner instanceof JTextField) campoActivo = (JTextField) owner;
+        if (campoActivo == null) {
+            if (camposEcuaciones != null && !camposEcuaciones.isEmpty()) {
+                outer1:
+                for (List<JTextField> fila : camposEcuaciones) {
+                    for (JTextField tf : fila) {
+                        if (tf != null) { campoActivo = tf; break outer1; }
+                    }
+                }
+            }
+            if (campoActivo == null && campos != null && campos.length > 0) {
+                outer2:
+                for (int i = 0; i < campos.length; i++) {
+                    for (int j = 0; j < campos[i].length; j++) {
+                        if (campos[i][j] != null) { campoActivo = campos[i][j]; break outer2; }
+                    }
+                }
+            }
+        }
+        try { navegarAnteriorCampo(); } catch (Exception ex) {}
+        Component nuevo = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        if (nuevo instanceof JTextField) {
+            campoActivo = (JTextField) nuevo;
+            campoActivo.requestFocusInWindow();
+            campoActivo.selectAll();
+        }
+    });
+});
+
+JButton btnRight = new JButton("→");
+btnRight.setFont(new Font("Segoe UI", Font.BOLD, 16));
+btnRight.setFocusPainted(false);
+btnRight.setBackground(new Color(52,152,219));
+btnRight.setForeground(Color.WHITE);
+btnRight.addActionListener(ev -> {
+    SwingUtilities.invokeLater(() -> {
+        Component owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        if (owner instanceof JTextField) campoActivo = (JTextField) owner;
+        if (campoActivo == null) {
+            if (camposEcuaciones != null && !camposEcuaciones.isEmpty()) {
+                outer3:
+                for (List<JTextField> fila : camposEcuaciones) {
+                    for (JTextField tf : fila) {
+                        if (tf != null) { campoActivo = tf; break outer3; }
+                    }
+                }
+            }
+            if (campoActivo == null && campos != null && campos.length > 0) {
+                outer4:
+                for (int i = 0; i < campos.length; i++) {
+                    for (int j = 0; j < campos[i].length; j++) {
+                        if (campos[i][j] != null) { campoActivo = campos[i][j]; break outer4; }
+                    }
+                }
+            }
+        }
+        try { navegarAlSiguienteCampo(); } catch (Exception ex) {}
+        Component nuevo = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        if (nuevo instanceof JTextField) {
+            campoActivo = (JTextField) nuevo;
+            campoActivo.requestFocusInWindow();
+            campoActivo.selectAll();
+        }
+    });
+});
+
+Dimension flechaSize = new Dimension(48, 30);
+btnLeft.setPreferredSize(flechaSize);
+btnRight.setPreferredSize(flechaSize);
+
+footer.add(btnLeft);
+footer.add(btnRight);
+
+buttonsWrapper.add(footer, BorderLayout.SOUTH);
+
+panelContenedor.add(buttonsWrapper, BorderLayout.NORTH);
+
+panelContenedor.setBorder(BorderFactory.createTitledBorder(
+      BorderFactory.createLineBorder(COLOR_PRIMARIO, 1), 
+      "⌨️ Teclado Numérico Fijo", 
+      0, 2, new Font("Segoe UI", Font.BOLD, 14), COLOR_PRIMARIO));
+panelContenedor.setBackground(COLOR_FONDO);
+panelContenedor.setPreferredSize(new Dimension(280, 350));
+
+return panelContenedor;
+
     }
 }
+
+
