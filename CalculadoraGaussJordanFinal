@@ -1,4 +1,4 @@
-package javaapplication36;
+package calculadoraGaussJordann;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -1133,6 +1133,7 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
         }
     }
 
+
     private static class MatrizHistorial {
         private final double[][] matriz;
         private final int tamano;
@@ -1181,7 +1182,6 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
             return sb.toString();
         }
     }
-
     private JPanel crearTecladoFijo() {
         final Color COLOR_TECLADO_FONDO = new Color(33, 33, 33);
         final Color COLOR_NUMERO = new Color(255, 255, 255);
@@ -1274,7 +1274,7 @@ public class CalculadoraGaussJordanFinal extends JFrame implements ActionListene
                             return;
 
                         case "X":
-                            dispose();
+                            panelTecladoFijo.setVisible(false);
                             return;
                     }
                 } catch (Exception ex) {
