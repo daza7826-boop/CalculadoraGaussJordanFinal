@@ -1544,8 +1544,30 @@ panelContenedor.setBackground(COLOR_FONDO);
 panelContenedor.setPreferredSize(new Dimension(280, 350));
 
 return panelContenedor;
-
-    }
 }
+    /**
+     * Configura un atajo de teclado (Key Binding) para cerrar la ventana.
+     * Usa la tecla de multiplicación (*) del teclado numérico.
+     */
+    private void configurarCierreConTeclado() {
+        // Obtenemos el InputMap para que el atajo funcione sin importar qué componente tenga el foco.
+        InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
 
+        // Define la tecla de Multiplicación del Teclado Numérico (VK_MULTIPLY = *)
+        KeyStroke numpadMultiplyKey = KeyStroke.getKeyStroke(KeyEvent.VK_MULTIPLY, 0); 
+        
+        // Un nombre único para la acción
+        String cerrarVentana = "cerrarVentana";
 
+        // Mapear la tecla al nombre de la acción
+        inputMap.put(numpadMultiplyKey, cerrarVentana); 
+
+        // Definir la acción que se ejecuta (cerrar la ventana)
+        getRootPane().getActionMap().put(cerrarVentana, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // El comando 'dispose()' cierra el JFrame
+                dispose(); 
+            }
+        });
+    }}
