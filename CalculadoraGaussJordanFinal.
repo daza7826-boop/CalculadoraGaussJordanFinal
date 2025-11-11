@@ -84,8 +84,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
                 panelTecladoFijo.setVisible(false);
             }
         });
-
-        // Panel ingreso
         JPanel panelIngresoCompleto = new JPanel(new BorderLayout(10,10));
         panelIngresoCompleto.setBackground(COLOR_FONDO);
 
@@ -179,8 +177,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         panelIngresoCompleto.add(panelAcciones, BorderLayout.SOUTH);
 
         tabbedPane.addTab("🔢 Ingreso de Matriz", panelIngresoCompleto);
-
-        // Pestañas resultado
         resultadoSistemaArea = new JTextArea();
         resultadoSistemaArea.setEditable(false);
         resultadoSistemaArea.setFont(new Font("Consolas", Font.PLAIN, 13));
@@ -257,8 +253,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
 
         add(tabbedPane, BorderLayout.CENTER);
     }
-
-    /* ---------- LOGICA DE HISTORIAL ---------- */
     private void guardarMatrizEnHistorial() {
         int n = tamanoActual;
         double[][] matrizDatos = new double[n][n+1];
@@ -272,7 +266,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             actualizarTablaHistorial(reg);
         } catch (NumberFormatException ignored){}
     }
-
     private void actualizarTablaHistorial(MatrizHistorial registro){
         String matrizA = registro.matrizToString(0, registro.getTamano());
         String vectorB = registro.matrizToString(registro.getTamano(), 1);
@@ -284,7 +277,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         fila.add(vectorB);
         modeloTablaHistorial.addRow(fila);
     }
-
     private void editarCargarMatriz(){
         int filaSeleccionada = tablaHistorial.getSelectedRow();
         if (filaSeleccionada==-1) return;
@@ -300,7 +292,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         tabbedPane.setSelectedIndex(0);
         JOptionPane.showMessageDialog(this, "Matriz cargada de " + n + "x" + n + " en la pestaña 'Ingreso de Matriz'.", "Carga Exitosa", JOptionPane.INFORMATION_MESSAGE);
     }
-
     private void borrarRegistroHistorial(){
         int filaSeleccionada = tablaHistorial.getSelectedRow();
         if (filaSeleccionada==-1) return;
@@ -312,8 +303,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             JOptionPane.showMessageDialog(this,"Registro eliminado con éxito.","Borrado",JOptionPane.INFORMATION_MESSAGE);
         }
     }
-
-    /* ---------- UTILIDADES UI ---------- */
     private JButton crearBoton(String texto, Color fondo, Color textoColor){
         JButton b = new JButton(texto);
         b.setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -323,8 +312,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         b.setBorder(BorderFactory.createEmptyBorder(8,15,8,15));
         return b;
     }
-
-    /* ---------- PANEL DE ECUACIONES (entrada) ---------- */
     private void cargarEjemplo(boolean forceTransfer){
         int n = tamanoActual;
         double[][] ejemplo;
@@ -356,7 +343,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         }
         if (forceTransfer) transferirAcuadros();
     }
-
     private void cambiarTamanoMatriz(){
         String seleccion = (String)cmbTamano.getSelectedItem();
         int nuevo = Integer.parseInt(seleccion.substring(0, seleccion.indexOf('x')));
@@ -366,7 +352,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             inicializarMatriz(tamanoActual);
         }
     }
-
     private void initializeInputPanel(int n, JPanel containerPanel){
         containerPanel.removeAll();
         camposEcuaciones.clear();
@@ -393,7 +378,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
                 campoActivo = (JTextField)e.getComponent(); abrirTecladoNumerico();
             }
         };
-
         KeyListener keyListener = new KeyAdapter(){
             @Override public void keyPressed(KeyEvent e){ if (e.getKeyCode()==KeyEvent.VK_ENTER){ transferirAcuadros(); e.consume(); } }
         };
@@ -425,7 +409,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         }
         containerPanel.revalidate(); containerPanel.repaint();
     }
-
     private void transferirAcuadros(){
         int n = tamanoActual;
         try {
@@ -446,7 +429,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             JOptionPane.showMessageDialog(this,"Ocurrió un error inesperado al transferir los datos: " + ex.getMessage(),"Error",JOptionPane.ERROR_MESSAGE);
         }
     }
-
     private String parseCoeficiente(String text) throws NumberFormatException {
         try { Double.parseDouble(text); return text; } catch (NumberFormatException ignored) {}
         String clean = text.toLowerCase().trim();
@@ -459,7 +441,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         return numberPart;
     }
 
-    /* ---------- PANEL MATRIZ (UI) ---------- */
     private void inicializarMatriz(int n){
         panelMatrizContainer.removeAll();
         JPanel panelMatrizTotal = new JPanel(new GridBagLayout());
@@ -527,7 +508,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
 
     private void abrirTecladoNumerico(){ if (panelTecladoFijo!=null) panelTecladoFijo.setVisible(true); }
 
-    /* ---------- NAVEGACION ENTRE CAMPOS ---------- */
     private void navegarAlSiguienteCampo(){
         if (campoActivo==null) return;
         int n = tamanoActual;
@@ -566,13 +546,10 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             if (camposResultados.get(i)==campoActivo){ fila.get(n-1).requestFocusInWindow(); return; }
         }
     }
-
-    /* ---------- CÁLCULO (Gauss-Jordan) ---------- */
     private void calcularAmbosResultados(int tabIndexToSelect){
         resolverSistema(); resolverInversa();
         tabbedPane.setSelectedIndex(tabIndexToSelect+1);
     }
-
     private void resolverSistema(){
         int n = tamanoActual;
         double[][] matriz = new double[n][n+1];
@@ -610,7 +587,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         resultadoSistemaArea.setText(proceso.toString());
         resultadoSistemaArea.setCaretPosition(0);
     }
-
     private void resolverInversa(){ _calcularInversa(resultadoInversaArea, false); }
 
     private void _calcularInversa(JTextArea area, boolean showSystemOverride){
@@ -649,13 +625,11 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         area.setText(proceso.toString());
         area.setCaretPosition(0);
     }
-
     private double[][] copiarMatriz(double[][] original){
         double[][] copia = new double[original.length][original[0].length];
         for (int i=0;i<original.length;i++) System.arraycopy(original[i],0,copia[i],0,original[i].length);
         return copia;
     }
-
     private String matrizToString(double[][] M, int n){
         StringBuilder sb = new StringBuilder();
         DecimalFormat df = new DecimalFormat("0.#####");
@@ -681,7 +655,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         sb.append(lineaSeparacion).append("\n");
         return sb.toString();
     }
-
     private String extraerInversa(double[][] M, int n){
         StringBuilder sb = new StringBuilder();
         DecimalFormat df = new DecimalFormat("0.#####");
@@ -699,7 +672,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         sb.append(lineaSeparacion).append("\n");
         return sb.toString();
     }
-
     private double[] gaussJordan(double[][] M, int n, boolean isSistema, StringBuilder proceso){
         DecimalFormat df = new DecimalFormat("0.#####");
         int colTotal = M[0].length;
@@ -737,7 +709,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         return new double[n]; // éxito para inversa (no usado directamente)
     }
 
-    /* ---------- TECLADO NUMERICO FIJO ---------- */
     private JPanel crearTecladoFijo(){
         final Color COLOR_TECLADO_FONDO = new Color(33,33,33);
         final Color COLOR_NUMERO = new Color(255,255,255);
@@ -747,7 +718,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         JPanel panelBotones = new JPanel(new GridLayout(4,4,5,5));
         panelBotones.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         panelBotones.setBackground(COLOR_TECLADO_FONDO);
-
         String[] botones = {"7","8","9","Borrar","4","5","6","+","1","2","3","-","0",".","ENTER","X"};
         Font fontBotones = new Font("Segoe UI", Font.BOLD, 20);
 
@@ -807,7 +777,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             else { b.setBackground(COLOR_OPERADOR); b.setForeground(Color.WHITE); }
             panelBotones.add(b);
         }
-
         JPanel panelContenedor = new JPanel(new BorderLayout());
         JPanel buttonsWrapper = new JPanel(new BorderLayout());
         buttonsWrapper.setOpaque(false);
@@ -836,7 +805,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
                 if (nuevo instanceof JTextField){ campoActivo = (JTextField)nuevo; campoActivo.requestFocusInWindow(); campoActivo.selectAll(); }
             });
         });
-
         JButton btnRight = new JButton("→");
         btnRight.setFont(new Font("Segoe UI", Font.BOLD, 16));
         btnRight.setFocusPainted(false);
@@ -857,14 +825,12 @@ public class CalculadoraGaussJordanFinal extends JFrame {
                 if (nuevo instanceof JTextField){ campoActivo = (JTextField)nuevo; campoActivo.requestFocusInWindow(); campoActivo.selectAll(); }
             });
         });
-
         Dimension flechaSize = new Dimension(48,30);
         btnLeft.setPreferredSize(flechaSize);
         btnRight.setPreferredSize(flechaSize);
         footer.add(btnLeft); footer.add(btnRight);
         buttonsWrapper.add(footer, BorderLayout.SOUTH);
         panelContenedor.add(buttonsWrapper, BorderLayout.NORTH);
-
         panelContenedor.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(COLOR_PRIMARIO,1),
                 "⌨️ Teclado Numérico Fijo",
@@ -873,7 +839,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         panelContenedor.setPreferredSize(new Dimension(280,350));
         return panelContenedor;
     }
-
     private void configurarCierreConTeclado(){
         InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         KeyStroke k = KeyStroke.getKeyStroke(KeyEvent.VK_MULTIPLY,0);
@@ -881,8 +846,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         im.put(k,cerrar);
         getRootPane().getActionMap().put(cerrar, new AbstractAction(){ @Override public void actionPerformed(ActionEvent e){ dispose(); }});
     }
-
-    /* ---------- CLASE INTERNA HISTORIAL ---------- */
     private static class MatrizHistorial {
         private final double[][] matriz;
         private final int tamano;
@@ -911,7 +874,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             return sb.toString();
         }
     }
-
     public static void main(String[] args){
         SwingUtilities.invokeLater(() -> {
             try { UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel"); } catch (Exception ignored){}
