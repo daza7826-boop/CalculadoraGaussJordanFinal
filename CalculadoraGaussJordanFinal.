@@ -458,3 +458,4 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         SwingUtilities.invokeLater(() -> { try { UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel"); } catch (Exception ignored){} CalculadoraGaussJordanFinal app = new CalculadoraGaussJordanFinal(); app.setVisible(true); });
     }
 }
+
