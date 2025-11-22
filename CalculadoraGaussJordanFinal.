@@ -1,4 +1,4 @@
-package calculadoraGaussJordann;
+package calculadoraGaussJordanFinal;
 
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
@@ -9,6 +9,9 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
+import javax.imageio.ImageIO;
+import java.io.IOException;
+import java.net.URL; // Necesaria para cargar la imagen desde el paquete
 
 public class CalculadoraGaussJordanFinal extends JFrame {
     private static final double TOL = 1e-9;
@@ -33,69 +36,127 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             H = new Color(155,89,182), DEL = new Color(231,76,60),
             SEC = new Color(52,73,94);
 
+    /**
+     * Clase interna para el panel de fondo con imagen.
+     */
+    private class BackgroundPanel extends JPanel {
+        private Image backgroundImage;
+
+        public BackgroundPanel() {
+            // Cargar la imagen usando el classpath
+            try {
+                // ⚠️ CAMBIA "fondo_matrix.jpg" por el nombre de tu archivo si es diferente
+                URL imageUrl = getClass().getResource("fondo calculadora.jpg"); 
+                if (imageUrl != null) {
+                    backgroundImage = ImageIO.read(imageUrl);
+                } else {
+                    System.err.println("Advertencia: La imagen 'fondo calculadora.jpg' no se encontró en el classpath. Usando color sólido.");
+                }
+            } catch (IOException e) {
+                System.err.println("Error al cargar la imagen de fondo: " + e.getMessage());
+                // e.printStackTrace(); // Descomentar para debug
+            }
+            setLayout(new BorderLayout(8, 8));
+            setOpaque(false); // Necesario para que el fondo se pinte correctamente
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (backgroundImage != null) {
+                // Dibujar la imagen escalada para cubrir todo el panel
+                g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+            } else {
+                // Fondo de reserva si la imagen falla en cargar
+                g.setColor(new Color(44, 62, 80)); // Un color oscuro de reserva
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        }
+    }
+    
     public CalculadoraGaussJordanFinal() {
         super("✨ Calculadora Gauss-Jordan");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(900, 550);
         setLocationRelativeTo(null);
-        getContentPane().setBackground(BG);
-        setLayout(new BorderLayout(8,8));
+
+        // 🆕 Crear el panel de fondo y establecerlo como ContentPane
+        BackgroundPanel mainPanel = new BackgroundPanel();
+        setContentPane(mainPanel); 
+
+        // ⚠️ El layout del JFrame ahora se aplica al mainPanel
+        mainPanel.setLayout(new BorderLayout(8,8));
 
         // NORTH (title + tamaño)
         JPanel north = new JPanel(new FlowLayout(FlowLayout.CENTER,10,8));
-        north.setBackground(Color.WHITE);
+        north.setOpaque(false); // Hacer transparente para ver el fondo
         JLabel titulo = new JLabel("Método de Eliminación Gauss-Jordan");
-        titulo.setFont(new Font("Segoe UI", Font.BOLD,18)); titulo.setForeground(SEC);
+        titulo.setFont(new Font("Segoe UI", Font.BOLD,18)); titulo.setForeground(Color.WHITE); // Cambiar a blanco para que resalte en el fondo oscuro
         north.add(titulo); north.add(Box.createHorizontalStrut(16));
-        north.add(new JLabel("Matriz (NxN):"));
+        JLabel labelTam = new JLabel("Matriz (NxN):"); labelTam.setForeground(Color.WHITE); // Cambiar a blanco
+        north.add(labelTam); 
         String[] tam = {"2x2","3x3","4x4","5x5","6x6","7x7","8x8","9x9","10x10"};
         cmbTamano = new JComboBox<>(tam); cmbTamano.setSelectedIndex(1);
         cmbTamano.setFont(new Font("Segoe UI", Font.BOLD,13));
         cmbTamano.addActionListener(e -> cambiarTamano());
         north.add(cmbTamano);
+        
         JPanel northWrapper = new JPanel(new GridBagLayout());
-        northWrapper.setBackground(Color.WHITE);
+        northWrapper.setOpaque(false); // Hacer transparente
         northWrapper.add(north, new GridBagConstraints());
-        add(northWrapper, BorderLayout.NORTH);
+        mainPanel.add(northWrapper, BorderLayout.NORTH);
 
         // TABS
         tabbedPane = new JTabbedPane(); tabbedPane.setFont(new Font("Segoe UI", Font.BOLD,13));
         tabbedPane.setBackground(BG);
+        tabbedPane.setOpaque(false); // Transparente para ver el fondo a través de los espacios
         tabbedPane.addChangeListener((ChangeListener)e -> { if (panelTeclado!=null && panelTeclado.isVisible() && tabbedPane.getSelectedIndex()!=0) panelTeclado.setVisible(false); });
 
         // INGRESO TAB
-        JPanel ingreso = new JPanel(new BorderLayout(8,8)); ingreso.setBackground(BG);
+        JPanel ingreso = new JPanel(new BorderLayout(8,8)); 
+        ingreso.setOpaque(false); // Hacer transparente
         JPanel entrada = new JPanel(); entrada.setLayout(new BoxLayout(entrada, BoxLayout.Y_AXIS));
-        entrada.setBackground(BG); entrada.setBorder(BorderFactory.createEmptyBorder(1,8,8,8));
+        entrada.setOpaque(false); // Hacer transparente
+        entrada.setBorder(BorderFactory.createEmptyBorder(1,8,8,8));
 
         // Ecuaciones (texto)
-        JPanel texto = new JPanel(new BorderLayout(6,6)); texto.setBackground(Color.WHITE);
+        JPanel texto = new JPanel(new BorderLayout(6,6)); 
+        texto.setOpaque(false); // Hacer transparente
         texto.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(P,1),
                 "✍️ Escribir Ejercicio (Coeficientes por Término)",0,2,new Font("Segoe UI",Font.BOLD,13),P));
-        ecuacionPanel = new JPanel(new GridBagLayout()); ecuacionPanel.setBackground(Color.WHITE);
+        ecuacionPanel = new JPanel(new GridBagLayout()); 
+        ecuacionPanel.setOpaque(false); // Hacer transparente
         initInputPanel(nActual, ecuacionPanel);
         texto.add(ecuacionPanel, BorderLayout.CENTER);
-        JPanel btnsEq = new JPanel(new FlowLayout(FlowLayout.RIGHT)); btnsEq.setBackground(Color.WHITE);
+        JPanel btnsEq = new JPanel(new FlowLayout(FlowLayout.RIGHT)); 
+        btnsEq.setOpaque(false); // Hacer transparente
         JButton btnEjemplo = btn("📋 Completar y Ver Ejemplo", new Color(41,128,185));
         btnEjemplo.addActionListener(a -> cargarEjemplo(true));
         JButton btnTrans = btn("Transferir a Matriz", SEC); btnTrans.addActionListener(a -> transferir());
         btnsEq.add(btnEjemplo); btnsEq.add(btnTrans);
         texto.add(btnsEq, BorderLayout.SOUTH);
-        JPanel textoWrapper = new JPanel(new GridBagLayout()); textoWrapper.setBackground(BG); textoWrapper.add(texto, new GridBagConstraints());
+        JPanel textoWrapper = new JPanel(new GridBagLayout()); 
+        textoWrapper.setOpaque(false); // Hacer transparente
+        textoWrapper.add(texto, new GridBagConstraints());
         entrada.add(textoWrapper); entrada.add(Box.createVerticalStrut(10));
 
         // Matriz Aumentada
-        JPanel matr = new JPanel(new BorderLayout(6,6)); matr.setBackground(Color.WHITE);
+        JPanel matr = new JPanel(new BorderLayout(6,6)); 
+        matr.setOpaque(false); // Hacer transparente
         matr.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(S,1),
                 "🔢 Matriz de Coeficientes Aumentada",0,2,new Font("Segoe UI",Font.BOLD,13),S));
-        panelMatrizContainer = new JPanel(new GridBagLayout()); panelMatrizContainer.setBackground(Color.WHITE);
+        panelMatrizContainer = new JPanel(new GridBagLayout()); 
+        panelMatrizContainer.setOpaque(false); // Hacer transparente
         inicializarMatriz(nActual);
         matr.add(panelMatrizContainer, BorderLayout.CENTER);
-        JPanel matrWrapper = new JPanel(new GridBagLayout()); matrWrapper.setBackground(BG); matrWrapper.add(matr, new GridBagConstraints());
+        JPanel matrWrapper = new JPanel(new GridBagLayout()); 
+        matrWrapper.setOpaque(false); // Hacer transparente
+        matrWrapper.add(matr, new GridBagConstraints());
         entrada.add(matrWrapper);
 
         // Acciones
-        JPanel acciones = new JPanel(new FlowLayout(FlowLayout.CENTER,12,6)); acciones.setBackground(BG);
+        JPanel acciones = new JPanel(new FlowLayout(FlowLayout.CENTER,12,6)); 
+        acciones.setOpaque(false); // Hacer transparente
         JButton btnRes = btn("Resolver Sistema (Ax=b) y Guardar", S); btnRes.addActionListener(a->{guardarHist(); calcularAmbos(0);});
         JButton btnInv = btn("Calcular Inversa (A⁻¹) y Guardar", I); btnInv.addActionListener(a->{guardarHist(); calcularAmbos(1);});
         JButton btnTecl = btn("⌨️ Mostrar Teclado Numérico", P); btnTecl.addActionListener(a->{ if (campoActivo==null){ if (!camposEcu.isEmpty() && !camposEcu.get(0).isEmpty()) {camposEcu.get(0).get(0).requestFocusInWindow(); return;} } abrirTeclado();});
@@ -103,8 +164,13 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         acciones.add(btnRes); acciones.add(btnInv); acciones.add(btnTecl); acciones.add(btnLim);
 
         JScrollPane sp = new JScrollPane(entrada); sp.setBorder(null);
+        // Hacemos el viewport transparente para ver el fondo
+        sp.setOpaque(false); 
+        sp.getViewport().setOpaque(false);
+        
         panelTeclado = crearTeclado(); panelTeclado.setVisible(false);
-        JPanel cont = new JPanel(new BorderLayout(8,0)); cont.setBackground(BG);
+        JPanel cont = new JPanel(new BorderLayout(8,0)); 
+        cont.setOpaque(false); // Hacer transparente
         cont.add(sp, BorderLayout.CENTER); cont.add(panelTeclado, BorderLayout.EAST);
         ingreso.add(cont, BorderLayout.CENTER); ingreso.add(acciones, BorderLayout.SOUTH);
         tabbedPane.addTab("🔢 Ingreso de Matriz", ingreso);
@@ -122,14 +188,16 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         tabbedPane.addTab("⭐ Inversa (A⁻¹)", spI);
 
         // Historial
-        JPanel ph = new JPanel(new BorderLayout(8,8)); ph.setBackground(BG);
+        JPanel ph = new JPanel(new BorderLayout(8,8)); 
+        ph.setOpaque(false); // Hacer transparente
         String[] cols = {"ID","Tamaño","Fecha y Hora","Matriz A","Vector b"};
         modeloHist = new DefaultTableModel(cols,0){ @Override public boolean isCellEditable(int r,int c){return false;} };
         tablaHist = new JTable(modeloHist); tablaHist.setFont(new Font("Segoe UI",Font.PLAIN,13)); tablaHist.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane sh = new JScrollPane(tablaHist);
         sh.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(H,2),"📚 Historial de Cálculos",0,2,new Font("Segoe UI",Font.BOLD,13),H));
         ph.add(sh, BorderLayout.CENTER);
-        JPanel btnHist = new JPanel(new FlowLayout(FlowLayout.CENTER,12,8)); btnHist.setBackground(BG);
+        JPanel btnHist = new JPanel(new FlowLayout(FlowLayout.CENTER,12,8)); 
+        btnHist.setOpaque(false); // Hacer transparente
         btnEditarHistorial = btn("✏️ Editar/Cargar Matriz", S); btnEditarHistorial.addActionListener(a->editar()); btnEditarHistorial.setEnabled(false);
         btnBorrarHistorial = btn("🗑️ Borrar Selección", DEL); btnBorrarHistorial.addActionListener(a->borrarHist()); btnBorrarHistorial.setEnabled(false);
         btnHist.add(btnEditarHistorial); btnHist.add(btnBorrarHistorial);
@@ -137,7 +205,8 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         tablaHist.getSelectionModel().addListSelectionListener(e->{ boolean sel = tablaHist.getSelectedRow()!=-1; btnEditarHistorial.setEnabled(sel); btnBorrarHistorial.setEnabled(sel); });
         tabbedPane.addTab("📚 Historial", ph);
 
-        add(tabbedPane, BorderLayout.CENTER);
+        // 🆕 Agregar al mainPanel (el panel de fondo)
+        mainPanel.add(tabbedPane, BorderLayout.CENTER);
         configurarCierreConTecla();
     }
 
@@ -174,7 +243,8 @@ public class CalculadoraGaussJordanFinal extends JFrame {
 
     private void inicializarMatriz(int n){
         panelMatrizContainer.removeAll();
-        JPanel p = new JPanel(new GridBagLayout()); p.setBackground(Color.WHITE);
+        JPanel p = new JPanel(new GridBagLayout()); 
+        p.setOpaque(false); // Hacer transparente
         GridBagConstraints gbc = new GridBagConstraints(); gbc.insets = new Insets(10,10,10,10); gbc.fill = GridBagConstraints.BOTH;
         String[] vars = {"X","Y","Z","X4","X5","X6","X7","X8","X9","X10"};
         for (int j=0;j<n;j++){ gbc.gridx=j; gbc.gridy=0; JLabel l = new JLabel(vars[j], SwingConstants.CENTER); l.setFont(new Font("Segoe UI",Font.BOLD,13)); l.setForeground(TXT); p.add(l,gbc); }
@@ -260,7 +330,7 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         } catch (NumberFormatException ex){ areaSistema.setText("¡ERROR! Formato inválido en la matriz."); return; }
         if (b_vacio){ _calcularInversa(areaSistema, true); return; }
         double[][] copia = copiar(M); StringBuilder s = new StringBuilder();
-        s.append("\n  Resolviendo Sistema (Ax=b)\n\n");
+        s.append("\n  Resolviendo Sistema (Ax=b)\n\n");
         s.append("Matriz Aumentada Inicial [A | b]:\n").append(matrizToString(copia,n)).append("\n");
         double[] sol = gaussJordan(copia,n,true,s);
         s.append("\n\n");
@@ -397,7 +467,8 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         footer.add(left); footer.add(right);
         cont.add(grid, BorderLayout.CENTER); cont.add(footer, BorderLayout.SOUTH);
         cont.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(P,1),"⌨️ Teclado Numérico Fijo",0,2,new Font("Segoe UI",Font.BOLD,13),P));
-        cont.setBackground(BG); cont.setPreferredSize(new Dimension(280,340));
+        cont.setOpaque(false); // Hacer transparente
+        cont.setPreferredSize(new Dimension(280,340));
         return cont;
     }
     private void abrirTeclado(){ if (panelTeclado!=null) panelTeclado.setVisible(true); }
@@ -455,7 +526,14 @@ public class CalculadoraGaussJordanFinal extends JFrame {
     }
 
     public static void main(String[] args){
-        SwingUtilities.invokeLater(() -> { try { UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel"); } catch (Exception ignored){} CalculadoraGaussJordanFinal app = new CalculadoraGaussJordanFinal(); app.setVisible(true); });
+        SwingUtilities.invokeLater(() -> { 
+            try { 
+                // Usar Nimbus para un look moderno
+                UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel"); 
+            } catch (Exception ignored){} 
+            
+            CalculadoraGaussJordanFinal app = new CalculadoraGaussJordanFinal(); 
+            app.setVisible(true); 
+        });
     }
 }
-
