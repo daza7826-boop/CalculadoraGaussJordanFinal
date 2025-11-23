@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.List;
 import javax.imageio.ImageIO;
 import java.io.IOException;
-import java.net.URL; // Necesaria para cargar la imagen desde el paquete
+import java.net.URL;
 
 public class CalculadoraGaussJordanFinal extends JFrame {
     private static final double TOL = 1e-9;
@@ -36,16 +36,12 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             H = new Color(155,89,182), DEL = new Color(231,76,60),
             SEC = new Color(52,73,94);
 
-    /**
-     * Clase interna para el panel de fondo con imagen.
-     */
+
     private class BackgroundPanel extends JPanel {
         private Image backgroundImage;
 
         public BackgroundPanel() {
-            // Cargar la imagen usando el classpath
             try {
-                // ⚠️ CAMBIA "fondo_matrix.jpg" por el nombre de tu archivo si es diferente
                 URL imageUrl = getClass().getResource("fondo calculadora.jpg"); 
                 if (imageUrl != null) {
                     backgroundImage = ImageIO.read(imageUrl);
@@ -54,21 +50,17 @@ public class CalculadoraGaussJordanFinal extends JFrame {
                 }
             } catch (IOException e) {
                 System.err.println("Error al cargar la imagen de fondo: " + e.getMessage());
-                // e.printStackTrace(); // Descomentar para debug
             }
             setLayout(new BorderLayout(8, 8));
-            setOpaque(false); // Necesario para que el fondo se pinte correctamente
+            setOpaque(false);
         }
-
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             if (backgroundImage != null) {
-                // Dibujar la imagen escalada para cubrir todo el panel
                 g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
             } else {
-                // Fondo de reserva si la imagen falla en cargar
-                g.setColor(new Color(44, 62, 80)); // Un color oscuro de reserva
+                g.setColor(new Color(44, 62, 80)); 
                 g.fillRect(0, 0, getWidth(), getHeight());
             }
         }
