@@ -16,7 +16,7 @@ import java.net.URL;
 public class CalculadoraGaussJordanFinal extends JFrame {
     private static final double TOL = 1e-9;
     private final List<MatrizHistorial> historial = new ArrayList<>();
-    private DefaultTableModel modeloHist;
+    private final DefaultTableModel modeloHist;
     private JTable tablaHist;
     private final JButton btnEditarHistorial, btnBorrarHistorial;
     private JTextField[][] campos;
@@ -30,58 +30,47 @@ public class CalculadoraGaussJordanFinal extends JFrame {
     private JPanel ecuacionPanel;
     private JTextField campoActivo;
     private JPanel panelTeclado;
-    private final Color P = new Color(39,174,96), BG = new Color(248,249,249),
+ private final Color P = new Color(39,174,96), BG = new Color(248,249,249),
             S = new Color(52,152,219), I = new Color(243,156,18),
-            TXT = new Color(44,62,80), FB = new Color(232,248,245),
+            TXT = new Color(152,152,100), FB = new Color(232,248,245),
             H = new Color(155,89,182), DEL = new Color(231,76,60),
             SEC = new Color(52,73,94);
-
-
     private class BackgroundPanel extends JPanel {
         private Image backgroundImage;
-
         public BackgroundPanel() {
             try {
                 URL imageUrl = getClass().getResource("fondo calculadora.jpg"); 
                 if (imageUrl != null) {
                     backgroundImage = ImageIO.read(imageUrl);
                 } else {
-                    System.err.println("Advertencia: La imagen 'fondo calculadora.jpg' no se encontró en el classpath. Usando color sólido.");
                 }
             } catch (IOException e) {
-                System.err.println("Error al cargar la imagen de fondo: " + e.getMessage());
             }
             setLayout(new BorderLayout(8, 8));
-            setOpaque(false);
+            setOpaque(false); 
         }
+
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             if (backgroundImage != null) {
                 g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
             } else {
-                g.setColor(new Color(44, 62, 80)); 
+                g.setColor(new Color(44, 62, 80));
                 g.fillRect(0, 0, getWidth(), getHeight());
             }
         }
     }
-    
     public CalculadoraGaussJordanFinal() {
         super("✨ Calculadora Gauss-Jordan");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(900, 550);
+        setSize(900, 615);
         setLocationRelativeTo(null);
-
-        // 🆕 Crear el panel de fondo y establecerlo como ContentPane
         BackgroundPanel mainPanel = new BackgroundPanel();
         setContentPane(mainPanel); 
-
-        // ⚠️ El layout del JFrame ahora se aplica al mainPanel
-        mainPanel.setLayout(new BorderLayout(8,8));
-
-        // NORTH (title + tamaño)
-        JPanel north = new JPanel(new FlowLayout(FlowLayout.CENTER,10,8));
-        north.setOpaque(false); // Hacer transparente para ver el fondo
+        mainPanel.setLayout(new BorderLayout(10,10));
+        JPanel north = new JPanel(new FlowLayout(FlowLayout.CENTER,8,8));
+        north.setOpaque(false); 
         JLabel titulo = new JLabel("Método de Eliminación Gauss-Jordan");
         titulo.setFont(new Font("Segoe UI", Font.BOLD,18)); titulo.setForeground(Color.WHITE); // Cambiar a blanco para que resalte en el fondo oscuro
         north.add(titulo); north.add(Box.createHorizontalStrut(16));
@@ -94,59 +83,55 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         north.add(cmbTamano);
         
         JPanel northWrapper = new JPanel(new GridBagLayout());
-        northWrapper.setOpaque(false); // Hacer transparente
+        northWrapper.setOpaque(false); 
         northWrapper.add(north, new GridBagConstraints());
         mainPanel.add(northWrapper, BorderLayout.NORTH);
 
-        // TABS
-        tabbedPane = new JTabbedPane(); tabbedPane.setFont(new Font("Segoe UI", Font.BOLD,13));
+
+        tabbedPane = new JTabbedPane(); tabbedPane.setFont(new Font("", Font.BOLD,13));
         tabbedPane.setBackground(BG);
-        tabbedPane.setOpaque(false); // Transparente para ver el fondo a través de los espacios
+        tabbedPane.setOpaque(false);
         tabbedPane.addChangeListener((ChangeListener)e -> { if (panelTeclado!=null && panelTeclado.isVisible() && tabbedPane.getSelectedIndex()!=0) panelTeclado.setVisible(false); });
 
-        // INGRESO TAB
         JPanel ingreso = new JPanel(new BorderLayout(8,8)); 
-        ingreso.setOpaque(false); // Hacer transparente
+        ingreso.setOpaque(false); 
         JPanel entrada = new JPanel(); entrada.setLayout(new BoxLayout(entrada, BoxLayout.Y_AXIS));
-        entrada.setOpaque(false); // Hacer transparente
+        entrada.setOpaque(false); 
         entrada.setBorder(BorderFactory.createEmptyBorder(1,8,8,8));
 
-        // Ecuaciones (texto)
         JPanel texto = new JPanel(new BorderLayout(6,6)); 
-        texto.setOpaque(false); // Hacer transparente
+        texto.setOpaque(false); 
         texto.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(P,1),
                 "✍️ Escribir Ejercicio (Coeficientes por Término)",0,2,new Font("Segoe UI",Font.BOLD,13),P));
         ecuacionPanel = new JPanel(new GridBagLayout()); 
-        ecuacionPanel.setOpaque(false); // Hacer transparente
+        ecuacionPanel.setOpaque(false); 
         initInputPanel(nActual, ecuacionPanel);
         texto.add(ecuacionPanel, BorderLayout.CENTER);
         JPanel btnsEq = new JPanel(new FlowLayout(FlowLayout.RIGHT)); 
-        btnsEq.setOpaque(false); // Hacer transparente
+        btnsEq.setOpaque(false); 
         JButton btnEjemplo = btn("📋 Completar y Ver Ejemplo", new Color(41,128,185));
         btnEjemplo.addActionListener(a -> cargarEjemplo(true));
         JButton btnTrans = btn("Transferir a Matriz", SEC); btnTrans.addActionListener(a -> transferir());
         btnsEq.add(btnEjemplo); btnsEq.add(btnTrans);
         texto.add(btnsEq, BorderLayout.SOUTH);
         JPanel textoWrapper = new JPanel(new GridBagLayout()); 
-        textoWrapper.setOpaque(false); // Hacer transparente
+        textoWrapper.setOpaque(false); 
         textoWrapper.add(texto, new GridBagConstraints());
         entrada.add(textoWrapper); entrada.add(Box.createVerticalStrut(10));
 
-        // Matriz Aumentada
         JPanel matr = new JPanel(new BorderLayout(6,6)); 
-        matr.setOpaque(false); // Hacer transparente
+        matr.setOpaque(false); 
         matr.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(S,1),
                 "🔢 Matriz de Coeficientes Aumentada",0,2,new Font("Segoe UI",Font.BOLD,13),S));
         panelMatrizContainer = new JPanel(new GridBagLayout()); 
-        panelMatrizContainer.setOpaque(false); // Hacer transparente
+        panelMatrizContainer.setOpaque(false); 
         inicializarMatriz(nActual);
         matr.add(panelMatrizContainer, BorderLayout.CENTER);
         JPanel matrWrapper = new JPanel(new GridBagLayout()); 
-        matrWrapper.setOpaque(false); // Hacer transparente
+        matrWrapper.setOpaque(false);
         matrWrapper.add(matr, new GridBagConstraints());
         entrada.add(matrWrapper);
 
-        // Acciones
         JPanel acciones = new JPanel(new FlowLayout(FlowLayout.CENTER,12,6)); 
         acciones.setOpaque(false); // Hacer transparente
         JButton btnRes = btn("Resolver Sistema (Ax=b) y Guardar", S); btnRes.addActionListener(a->{guardarHist(); calcularAmbos(0);});
@@ -156,32 +141,28 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         acciones.add(btnRes); acciones.add(btnInv); acciones.add(btnTecl); acciones.add(btnLim);
 
         JScrollPane sp = new JScrollPane(entrada); sp.setBorder(null);
-        // Hacemos el viewport transparente para ver el fondo
         sp.setOpaque(false); 
         sp.getViewport().setOpaque(false);
         
         panelTeclado = crearTeclado(); panelTeclado.setVisible(false);
         JPanel cont = new JPanel(new BorderLayout(8,0)); 
-        cont.setOpaque(false); // Hacer transparente
+        cont.setOpaque(false);
         cont.add(sp, BorderLayout.CENTER); cont.add(panelTeclado, BorderLayout.EAST);
         ingreso.add(cont, BorderLayout.CENTER); ingreso.add(acciones, BorderLayout.SOUTH);
         tabbedPane.addTab("🔢 Ingreso de Matriz", ingreso);
 
-        // RESULTADOS: Sistema
         areaSistema = new JTextArea(); areaSistema.setEditable(false); areaSistema.setFont(new Font("Consolas",Font.PLAIN,13)); areaSistema.setForeground(TXT);
         JScrollPane spS = new JScrollPane(areaSistema);
         spS.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(S,2),"📝 Solución (Ax=b)",0,2,new Font("Segoe UI",Font.BOLD,13),S));
         tabbedPane.addTab("📝 Solución (Ax=b)", spS);
 
-        // Inversa
         areaInversa = new JTextArea(); areaInversa.setEditable(false); areaInversa.setFont(new Font("Consolas",Font.PLAIN,13)); areaInversa.setForeground(TXT);
         JScrollPane spI = new JScrollPane(areaInversa);
         spI.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(I,2),"⭐ Detalle del Proceso y Matriz Inversa (A⁻¹)",0,2,new Font("Segoe UI",Font.BOLD,13),I));
         tabbedPane.addTab("⭐ Inversa (A⁻¹)", spI);
 
-        // Historial
         JPanel ph = new JPanel(new BorderLayout(8,8)); 
-        ph.setOpaque(false); // Hacer transparente
+        ph.setOpaque(false); 
         String[] cols = {"ID","Tamaño","Fecha y Hora","Matriz A","Vector b"};
         modeloHist = new DefaultTableModel(cols,0){ @Override public boolean isCellEditable(int r,int c){return false;} };
         tablaHist = new JTable(modeloHist); tablaHist.setFont(new Font("Segoe UI",Font.PLAIN,13)); tablaHist.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -197,12 +178,11 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         tablaHist.getSelectionModel().addListSelectionListener(e->{ boolean sel = tablaHist.getSelectedRow()!=-1; btnEditarHistorial.setEnabled(sel); btnBorrarHistorial.setEnabled(sel); });
         tabbedPane.addTab("📚 Historial", ph);
 
-        // 🆕 Agregar al mainPanel (el panel de fondo)
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
         configurarCierreConTecla();
     }
 
-    /* ---------- Helpers / UI builders ---------- */
+
     private JButton btn(String txt, Color bg){ JButton b = new JButton(txt); b.setFont(new Font("Segoe UI",Font.BOLD,13)); b.setBackground(bg); b.setForeground(Color.WHITE); b.setFocusPainted(false); b.setBorder(BorderFactory.createEmptyBorder(6,12,6,12)); return b; }
 
     private void initInputPanel(int n, JPanel cont){
@@ -212,8 +192,10 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         for (int j=0;j<n;j++){ gbc.gridx = j; gbc.gridy = 0; JLabel l = new JLabel(vars[j], SwingConstants.CENTER); l.setFont(new Font("Segoe UI",Font.BOLD,12)); l.setForeground(TXT); cont.add(l,gbc); }
         gbc.gridx = n+1; gbc.gridy = 0; JLabel lb = new JLabel("B", SwingConstants.CENTER); lb.setFont(new Font("Segoe UI",Font.BOLD,12)); lb.setForeground(S); cont.add(lb,gbc);
 
-        FocusListener fl = new FocusAdapter(){ public void focusGained(FocusEvent e){ campoActivo = (JTextField)e.getComponent(); abrirTeclado(); } };
-        KeyAdapter kl = new KeyAdapter(){ public void keyPressed(KeyEvent e){ if (e.getKeyCode()==KeyEvent.VK_ENTER){ transferir(); e.consume(); } } };
+        FocusListener fl = new FocusAdapter(){@Override
+ public void focusGained(FocusEvent e){ campoActivo = (JTextField)e.getComponent(); abrirTeclado(); } };
+        KeyAdapter kl = new KeyAdapter(){@Override
+ public void keyPressed(KeyEvent e){ if (e.getKeyCode()==KeyEvent.VK_ENTER){ transferir(); e.consume(); } } };
 
         for (int i=0;i<n;i++){
             List<JTextField> fila = new ArrayList<>();
@@ -236,15 +218,17 @@ public class CalculadoraGaussJordanFinal extends JFrame {
     private void inicializarMatriz(int n){
         panelMatrizContainer.removeAll();
         JPanel p = new JPanel(new GridBagLayout()); 
-        p.setOpaque(false); // Hacer transparente
+        p.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints(); gbc.insets = new Insets(10,10,10,10); gbc.fill = GridBagConstraints.BOTH;
         String[] vars = {"X","Y","Z","X4","X5","X6","X7","X8","X9","X10"};
         for (int j=0;j<n;j++){ gbc.gridx=j; gbc.gridy=0; JLabel l = new JLabel(vars[j], SwingConstants.CENTER); l.setFont(new Font("Segoe UI",Font.BOLD,13)); l.setForeground(TXT); p.add(l,gbc); }
         gbc.gridx = n+1; gbc.gridy=0; JLabel lb = new JLabel("Términos independientes", SwingConstants.CENTER); lb.setFont(new Font("Segoe UI",Font.BOLD,13)); lb.setForeground(S); p.add(lb,gbc);
         campos = new JTextField[n][n+1];
 
-        FocusListener fl = new FocusAdapter(){ public void focusGained(FocusEvent e){ campoActivo = (JTextField)e.getComponent(); abrirTeclado(); } };
-        KeyAdapter kl = new KeyAdapter(){ public void keyPressed(KeyEvent e){ if (e.getKeyCode()==KeyEvent.VK_ENTER){ transferir(); e.consume(); } } };
+        FocusListener fl = new FocusAdapter(){@Override
+ public void focusGained(FocusEvent e){ campoActivo = (JTextField)e.getComponent(); abrirTeclado(); } };
+        KeyAdapter kl = new KeyAdapter(){@Override
+ public void keyPressed(KeyEvent e){ if (e.getKeyCode()==KeyEvent.VK_ENTER){ transferir(); e.consume(); } } };
 
         for (int i=0;i<n;i++){
             for (int j=0;j<n+1;j++){
@@ -264,7 +248,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         panelMatrizContainer.add(p, new GridBagConstraints()); panelMatrizContainer.revalidate(); panelMatrizContainer.repaint();
     }
 
-    /* ---------- Transfer / parsing / examples ---------- */
     private void transferir(){
         int n = nActual;
         try {
@@ -274,7 +257,7 @@ public class CalculadoraGaussJordanFinal extends JFrame {
                     campos[i][j].setText(v);
                 }
                 String tb = camposB.get(i).getText().trim(); String vb = tb.isEmpty()? "0" : tb;
-                Double.parseDouble(vb); campos[i][n].setText(vb);
+                Double.valueOf(vb); campos[i][n].setText(vb);
             }
         } catch (NumberFormatException ex){
             JOptionPane.showMessageDialog(this,"¡ERROR! Formato inválido. Usa solo números válidos o coeficientes simples.","Error",JOptionPane.ERROR_MESSAGE);
@@ -283,14 +266,14 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         }
     }
     private String parseCoef(String t) throws NumberFormatException {
-        try { Double.parseDouble(t); return t; } catch (NumberFormatException ignored) {}
+        try { Double.valueOf(t); return t; } catch (NumberFormatException ignored) {}
         String c = t.toLowerCase().trim();
         if (c.matches("^[a-z].*")) return "1";
         if (c.matches("^\\-([a-z].*)$")) return "-1";
         String num = c.replaceAll("[a-z].*","").trim();
         if (num.isEmpty() || num.equals("+")) return "1";
         if (num.equals("-")) return "-1";
-        Double.parseDouble(num);
+        Double.valueOf(num);
         return num;
     }
     private void cargarEjemplo(boolean transfer){
@@ -310,7 +293,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         if (transfer) transferir();
     }
 
-    /* ---------- Cálculo Gauss-Jordan / Inversa / Mostrar ---------- */
     private void calcularAmbos(int tab){ resolverSistema(); resolverInversa(); tabbedPane.setSelectedIndex(tab+1); }
     private void resolverSistema(){
         int n = nActual; double[][] M = new double[n][n+1]; boolean b_vacio = true;
@@ -345,7 +327,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         else s.append("Matriz no invertible (singular).");
         area.setText(s.toString()); area.setCaretPosition(0);
     }
-
     private double[] gaussJordan(double[][] M, int n, boolean sistema, StringBuilder proceso){
         DecimalFormat df = new DecimalFormat("0.");
         int cols = M[0].length;
@@ -364,9 +345,7 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         if (sistema){ double[] sol = new double[n]; for (int i=0;i<n;i++) sol[i]=M[i][n]; return sol; }
         return new double[n];
     }
-
     private double[][] copiar(double[][] orig){ double[][] c = new double[orig.length][orig[0].length]; for (int i=0;i<orig.length;i++) System.arraycopy(orig[i],0,c[i],0,orig[i].length); return c; }
-
     private String matrizToString(double[][] M, int n){
         StringBuilder sb = new StringBuilder(); DecimalFormat df = new DecimalFormat("0.#####");
         int cols = M[0].length; int w = 10;
@@ -391,8 +370,6 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         for (int i=0;i<n;i++){ sb.append(sep).append("\n|"); for (int j=n;j<2*n;j++){ double v = Math.abs(M[i][j])<TOL?0.0:M[i][j]; sb.append(String.format("%" + w + "s", df.format(v))).append("|"); } sb.append("\n"); }
         sb.append(sep).append("\n"); return sb.toString();
     }
-
-    /* ---------- Historial ---------- */
     private void guardarHist(){
         int n = nActual; double[][] mat = new double[n][n+1];
         try { for (int i=0;i<n;i++) for (int j=0;j<n+1;j++){ String t = campos[i][j].getText(); mat[i][j] = t.isEmpty()?0.0:Double.parseDouble(t); } }
@@ -421,10 +398,8 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         int c = JOptionPane.showConfirmDialog(this,"¿Seguro que quieres eliminar este registro?","Confirmar",JOptionPane.YES_NO_OPTION);
         if (c==JOptionPane.YES_OPTION){ historial.remove(f); modeloHist.removeRow(f); for (int i=0;i<modeloHist.getRowCount();i++) modeloHist.setValueAt(i+1,i,0); JOptionPane.showMessageDialog(this,"Registro eliminado."); }
     }
-
-    /* ---------- Teclado y navegación ---------- */
     private JPanel crearTeclado(){
-        Color KBG = new Color(33,33,33), KNUM = new Color(66,66,66), KOP = new Color(255,140,0);
+        Color KBG = new Color(255,255,255), KNUM = new Color(66,66,66), KOP = new Color(255,140,0);
         JPanel grid = new JPanel(new GridLayout(4,4,5,5)); grid.setBorder(BorderFactory.createEmptyBorder(8,8,8,8)); grid.setBackground(KBG);
         String[] keys = {"7","8","9","Borrar","4","5","6","+","1","2","3","-","0",".","ENTER","X"};
         Font f = new Font("Segoe UI",Font.BOLD,18);
@@ -458,13 +433,12 @@ public class CalculadoraGaussJordanFinal extends JFrame {
         right.addActionListener(e->{ SwingUtilities.invokeLater(()->{ Component o = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner(); if (o instanceof JTextField) campoActivo = (JTextField)o; navegarSiguiente(); Component n = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner(); if (n instanceof JTextField){ campoActivo=(JTextField)n; campoActivo.requestFocusInWindow(); campoActivo.selectAll(); } });});
         footer.add(left); footer.add(right);
         cont.add(grid, BorderLayout.CENTER); cont.add(footer, BorderLayout.SOUTH);
-        cont.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(P,1),"⌨️ Teclado Numérico Fijo",0,2,new Font("Segoe UI",Font.BOLD,13),P));
-        cont.setOpaque(false); // Hacer transparente
+        cont.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(P,1),"Teclado Numérico Fijo",0,2,new Font("",Font.BOLD,13),P));
+        cont.setOpaque(false);
         cont.setPreferredSize(new Dimension(280,340));
         return cont;
     }
     private void abrirTeclado(){ if (panelTeclado!=null) panelTeclado.setVisible(true); }
-
     private void navegarSiguiente(){
         if (campoActivo==null) return;
         int n = nActual;
@@ -499,13 +473,12 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             if (camposB.get(i)==campoActivo){ fila.get(n-1).requestFocusInWindow(); return; }
         }
     }
-
     private void limpiarCamposBasicos(){ for (List<JTextField> f: camposEcu) for (JTextField c: f) c.setText(""); for (JTextField c: camposB) c.setText(""); }
     private void limpiar(){ for (int i=0;i<nActual;i++) for (int j=0;j<nActual+1;j++) campos[i][j].setText(""); limpiarCamposBasicos(); areaSistema.setText(""); areaInversa.setText(""); tabbedPane.setSelectedIndex(0); campoActivo=null; if (panelTeclado!=null) panelTeclado.setVisible(false); }
     private void cambiarTamano(){ String sel = (String)cmbTamano.getSelectedItem(); int nuevo = Integer.parseInt(sel.substring(0,sel.indexOf('x'))); if (nuevo!=nActual){ nActual = nuevo; if (ecuacionPanel!=null) initInputPanel(nActual, ecuacionPanel); inicializarMatriz(nActual); } }
-    private void configurarCierreConTecla(){ InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW); KeyStroke k = KeyStroke.getKeyStroke(KeyEvent.VK_MULTIPLY,0); im.put(k,"cerrar"); getRootPane().getActionMap().put("cerrar", new AbstractAction(){ public void actionPerformed(ActionEvent e){ dispose(); }}); }
+    private void configurarCierreConTecla(){ InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW); KeyStroke k = KeyStroke.getKeyStroke(KeyEvent.VK_MULTIPLY,0); im.put(k,"cerrar"); getRootPane().getActionMap().put("cerrar", new AbstractAction(){@Override
+ public void actionPerformed(ActionEvent e){ dispose(); }}); }
 
-    /* ---------- Inner classes ---------- */
     private static class MatrizHistorial {
         private final double[][] mat; private final int tam; private final Date fecha;
         public MatrizHistorial(double[][] m, int t, Date f){ tam=t; fecha=f; mat=new double[t][t+1]; for (int i=0;i<t;i++) System.arraycopy(m[i],0,mat[i],0,t+1); }
@@ -516,16 +489,13 @@ public class CalculadoraGaussJordanFinal extends JFrame {
             return sb.toString();
         }
     }
-
     public static void main(String[] args){
-        SwingUtilities.invokeLater(() -> { 
-            try { 
-                // Usar Nimbus para un look moderno
-                UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel"); 
-            } catch (Exception ignored){} 
-            
-            CalculadoraGaussJordanFinal app = new CalculadoraGaussJordanFinal(); 
-            app.setVisible(true); 
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+            } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException ignored){}
+            CalculadoraGaussJordanFinal app = new CalculadoraGaussJordanFinal();
+            app.setVisible(true);
         });
     }
 }
